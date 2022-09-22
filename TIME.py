@@ -37,7 +37,7 @@ from socket import socket, SOCK_STREAM, AF_INET
 BUFSIZE = 4
 
 if len(sys.argv) == 2:
-    host = sys.argv[1]
+    target_ip = sys.argv[1]
 else:
     print("Input the IP address of the desired time server\n")
     print("Usage: %s <IP Address>\n" % (sys.argv[0]))
@@ -45,7 +45,8 @@ else:
 
 # Open a socket at the inputted IP Add, Port 37
 clientSocket = socket(AF_INET, SOCK_STREAM)
-clientSocket.connect((host, 37)) # 37 is TIMEs dedicated port
+print("Attempting to connect to:", target_ip)
+clientSocket.connect((target_ip, 37)) # 37 is TIMEs dedicated port
 
 while True:
     try:
@@ -54,7 +55,7 @@ while True:
         if not time:
             print("Broken TCP connection")
             break
-        print(time.decode())
+        # print(time.decode())
     except KeyboardInterrupt:
         print("\nInterrupted by CTRL-C")
         break
