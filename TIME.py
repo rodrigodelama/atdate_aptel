@@ -30,22 +30,26 @@
 
 
 import sys
-from socket import socket, SOCK_STREAM, AF_INET
+from socket import socket, SOCK_STREAM, AF_INET, gethostbyname
 
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
-BUFSIZE = 4
+BUFSIZE = 4 # SHOULD IT BE SOMETHING ELSE ??
 
 if len(sys.argv) == 2:
-    target_ip = sys.argv[1]
+    target = sys.argv[1]
 else:
     print("Input the IP address of the desired time server\n")
     print("Usage: %s <IP Address>\n" % (sys.argv[0]))
     sys.exit(1)
 
-# Open a socket at the inputted IP Add, Port 37
+# if target ip is a hostname do an inverse DNS lookup to find out its IP address
+
+# Open a socket at the inputted IP address, Port 37
 clientSocket = socket(AF_INET, SOCK_STREAM)
-print("Attempting to connect to:", target_ip)
+print("Attempting to connect to:", target)
+target_ip = gethostbyname(target) # Works for both hostnames and IPs
+print(target_ip) # Test print
 clientSocket.connect((target_ip, 37)) # 37 is TIMEs dedicated port
 
 while True:
@@ -55,10 +59,8 @@ while True:
         if not time:
             print("Broken TCP connection")
             break
-        # print(time.decode())
+        print(time.decode())
     except KeyboardInterrupt:
         print("\nInterrupted by CTRL-C")
         break
-
-# Close the socket
-clientSocket.close()
+clientSocket.close() # Close the socket
