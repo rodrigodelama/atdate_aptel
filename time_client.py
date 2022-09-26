@@ -1,42 +1,29 @@
 # !/usr/bin/python3
-# time.py
+# time_client.py
 
 # AUTHOR: Rodrigo De Lama @rodrigodelama
 #         100451775@alumnos.uc3m.es
 # DESCRIPTION: Basic TIME client script based on the outline of RFC868
-#              When used via TCP the time service works as follows:
-#               S: Listen on port 37 (45 octal).
-#               U: Connect to port 37.
-#               S: Send the time as a 32 bit binary number.
-#               U: Receive the time.
-#               U: Close the connection.
-#               S: Close the connection.
+
 
 '''
 Time since 00:00h 1/1/1900
-Time since UNIX existance 2208988800
+Time since UNIX existance 2208988800 (1970)
 
-The server listens for a connection on port 37.  When the connection
-is established, the server returns a 32-bit time value and closes the
-connection.  If the server is unable to determine the time at its
-site, it should either refuse the connection or close it without
-sending anything.
-
-Open TCP connexion at port 37 of input IP
-Recieve the time
-Check for a reasonable difference (check era)
-Ask again if not correct
-Close connection
+In plain-text:
+The server listens for a connection on port 37. When the connection
+is established, the client must send an empty TCP packet to which
+the server returns a 32-bit time value (data) and closes the
+connection.
 '''
-
 
 import sys # For commandline args
 from socket import socket, getaddrinfo, SOCK_STREAM, AF_INET, gaierror
 import time
 import struct # To isolate our desired info from the packet
 
-# Substract 2 hours, so we get + 2 hours (CEST)
-t_delta = 2208988800 - 3600*2 # epoch time - 2 hours
+# Substract 2 hours, to get (CEST +2 hours)
+time_delta = 2208988800 - 3600*2 # epoch time - 2 hours
 
 
 # Define a buffer size for the 32 bit BIN number we will recieve
@@ -70,19 +57,22 @@ recv_data = sockett.recv(BUFFSIZE) # An int that represents a number of bytes
 
 sockett.close() # Close the socket
 
-time1970 = struct.unpack("!I", recv_data)[0]
+'''
+! to tranform from the network order
+I meaning unsigned integer
+(equivalent to ntohs in C)
+'''
+time1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html#struct.calcsize
 
-time1970 -= t_delta
+time1970 -= time_delta
 actual_time = time.gmtime(time1970)
 
 print(actual_time)
-
 print(recv_data)
 
 
 
 '''
-
 [(<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_DGRAM: 2>, 17, '', ('93.184.216.34', 80)),(<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('93.184.216.34', 80)),(<AddressFamily.AF_INET6: 30>, <SocketKind.SOCK_DGRAM: 2>, 17, '', ('2606:2800:220:1:248:1893:25c8:1946', 80, 0, 0)),(<AddressFamily.AF_INET6: 30>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('2606:2800:220:1:248:1893:25c8:1946', 80, 0, 0))]
 
 '''
