@@ -1,8 +1,8 @@
 # !/usr/bin/python3
-# time_client.py
+# atdate.py
 
-# AUTHOR: Rodrigo De Lama @rodrigodelama
-#         100451775@alumnos.uc3m.es
+# AUTHOR:      Rodrigo De Lama @rodrigodelama
+#              100451775@alumnos.uc3m.es
 # DESCRIPTION: Basic TIME client script based on the outline of RFC868
 
 '''
