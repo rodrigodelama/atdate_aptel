@@ -17,6 +17,14 @@ time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 TCP = "TCP"
 UDP = "UDP"
 
+P = "-p"
+
+M = "-m"
+CU = "cu"
+CT = "ct"
+
+TIME_SERVER = "-s"
+
 # Server constants
 SERV_BUFSIZE = 1024
 BACKLOG = 10
@@ -158,19 +166,19 @@ def main():
     '''
     atdate [-s serverhost] [-p port] [-m cu | ct | s ] [-d]
 
-    -s serverhost
-    hostname || IP
-
-    -p port selection
-    if port is specified 
-    elif no port is specified use 37
-
-    -m
+    -m: operating mode
     cu: el programa arranca en modo consulta funcionando como cliente UDP.
     ct: el programa arranca en modo consulta funcionando como cliente TCP.
     s: el programa arranca en modo servidor.
     Si no se especifica la opción -m, el programa arranca en modo consulta UDP,
         es decir: -m cu.
+
+    -s: serverhost
+    hostname || IP
+
+    -p: port selection
+    if port is specified 
+    elif no port is specified use 37
 
     -d: modo depuración. Mostrará trazas adicionales para la depuración del
     programa.
@@ -179,34 +187,46 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     # Filter input args or instruct usage
-    if len(sys.argv) >= 7:
+    # filter argv positions for -m -s -p and -d
+    if len(sys.argv) >= 7: # we should have at most 7 args (0-6)
         print("Error: Too many input args")
         print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
+        print("Usage: %s -m <Mode> -s <Hostname/IP Address> <Port> <Protocol> \n" % (sys.argv[0]))
         sys.exit(1)
-    elif len(sys.argv) == 3:
+    
+    if ((sys.argv).find != "-m"):
+        mode = UDP
+    if ((sys.argv).find != "-s"):
+        if 
+        print("You must select Server Mode (-m s) if you do not input a hostname")
+    if ((sys.argv).find != "-p"):
+        port = 37
+
+    if (len(sys.argv) == 3):
         target = sys.argv[1]
         mode = sys.argv[2] # TEMPORARY
         port = 37 # Default port -> TEMPORARY
+        
+        if (mode == CU):
+            mode = UDP
+            # Modo consulta UDP: -m cu
+            get_current_time(target, mode, port)
+        elif (mode == CT):
+            mode = TCP
+            # Modo consulta TCP: -m ct
+            get_current_time(target, mode, port)
+        elif (mode == TIME_SERVER):
+            # Modo servidor: -m s
+            # TODO:
+            listening_port = port
+            time_server(listening_port)
+        else:
+            print("Error: Invalid operation mode")
+            sys.exit(1)
     else:
         print("Input the IP address, and the desired protocol to contact the time server")
         print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
         sys.exit(1)
-    
-    '''
-    if (-m == cu) mode = UDP
-    elif (-m == ct) mode = TCP
-    '''
-    
-    # Modo consulta UDP: -m cu
-
-    # get_current_time(target, UDP)
-    # Modo consulta TCP: -m ct
-    get_current_time(target, mode, port)
-
-    # Modo servidor: -m s
-    # TODO:
-    # time_server(listening_port)
 
 if __name__ == "__main__":
     while True:
