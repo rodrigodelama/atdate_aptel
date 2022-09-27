@@ -17,22 +17,22 @@ time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 TCP = "TCP"
 UDP = "UDP"
 
-def get_current_time(target, mode):
+def get_current_time(target, mode, port):
     print("Attempting to connect to:", target)
     # Get address info in a "2D" tuple
     # Index [0] is the IP address of the desired hostname
     # Index [-1] is the definition of the Port No. where we will open our socket
-    server = getaddrinfo(target, 37)[0][-1] # 2D 
+    server = getaddrinfo(target, port)[0][-1] # 2D 
 
     # Test print input address data:
     # (Format is: ('IP', PORT_NO) )
     # print(server)
 
     if (mode == UDP):
-        # For UDP
+        # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
         sockett = socket(AF_INET, SOCK_DGRAM)
     elif(mode == TCP):
-        # For TCP
+        # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
         sockett = socket(AF_INET, SOCK_STREAM)
     
     try:
@@ -148,6 +148,7 @@ def main():
     if len(sys.argv) == 3:
         target = sys.argv[1]
         mode = sys.argv[2] # TEMPORARY
+        port = 37 # Default port -> TEMPORARY
     else:
         print("Input the IP address of the desired time server")
         print("Usage: %s <IP Address>\n" (sys.argv[0]))
@@ -162,7 +163,7 @@ def main():
 
     # get_current_time(target, UDP)
     # Modo consulta TCP: -m ct
-    get_current_time(target, mode)
+    get_current_time(target, mode, port)
 
     # Modo servidor: -m s
 
