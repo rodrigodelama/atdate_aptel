@@ -70,14 +70,22 @@ def get_current_time(target, mode, port, debug_trigger):
 
     # Revieve the 4byte (32bit) current time data
     recv_data = clientSocket.recv(BUFSIZE)
+    
+    while recv_data == "b\'\'": # FIXME: why is this happening ??
+        try:
+            recv_data = clientSocket.recv(BUFSIZE)
+        except:
+            struct.error
+
     if debug_trigger == 1:
-            print("RAW recieved data: ", recv_data) # TODO: WHAT ENCODING IS THIS ??
+            print("RAW recieved data:", recv_data) # TODO: WHAT ENCODING IS THIS ??
 
     clientSocket.close() # Close the socket
     if debug_trigger == 1:
             print("Socket closed")
 
     time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
+    # FIXME: sometimes, mainly while running TCP, we get an error while unpacking "struct.error: unpack requires a buffer of 4 bytes"
     '''
     ! tranforms our data from the network order (BE) to x64 (LE)
     I means unsigned integer (4bytes: the buffer size we need)
@@ -88,10 +96,10 @@ def get_current_time(target, mode, port, debug_trigger):
     time_since_1970 -= time_delta
     actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it
     if debug_trigger == 1:
-            print("Complete formatted time: ", actual_time) # We will format this data below
+            print("Complete formatted time:", actual_time) # We will format this data below
     print(format_time(actual_time))
     if debug_trigger == 1:
-            print("Program success! Closing now...")
+            print("Success!")
     exit(0) # End program after succesful TIME request
 
 def format_time(actual_time):
@@ -149,7 +157,7 @@ def month(month):
 
 def time_server(listening_port, debug_trigger):
     # TODO:
-    print("TIME server running on port ", listening_port)
+    print("TIME server running on port", listening_port)
 
 #
 # From TCPServer_conc.py
@@ -207,10 +215,6 @@ def main():
     '''
     # Filter input args or instruct usage
 
-# function next() usually used by previously running iter(), but in our case it is not needed
-
-    # filter argv positions for -m -s -p and -d
-    my_port = DEFAULT_PORT
     if len(sys.argv) >= 7: # we should have at most 7 args (0-6)
         print("Error: Too many input args")
         print("Input the IP address, and the desired protocol to contact the time server")
@@ -223,6 +227,7 @@ def main():
         sys.exit(1)
 
     ## The following are the various conditions to interpret our input with flags
+    # We will filter argv positions for -m -s -p and -d
     
     # Debugger Activation
     try:
@@ -236,13 +241,13 @@ def main():
         if (sys.argv.index(HOSTNAME)): # HOSTNAME means -s
 
             if debug_trigger == 1:
-                print("Hostname input position in argv[] is: ", sys.argv.index(HOSTNAME))
-                print("Target (hostname) has been identified as: ", sys.argv[sys.argv.index(HOSTNAME)+1])
+                print("Hostname input position in argv[] is:", sys.argv.index(HOSTNAME)+1)
+                print("Target (hostname) has been identified as:", sys.argv[sys.argv.index(HOSTNAME)+1])
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
     except ValueError:
         try:
-            if (sys.argv.index(MODE)):
+            if (sys.argv.index(MODE)): # MODE means -m
                 print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
                 sys.exit(1)
         except ValueError:
@@ -261,7 +266,7 @@ def main():
 
     # Port selection for server and default behaviour programmed
     try:
-        if (sys.argv.index(PORT)):
+        if (sys.argv.index(PORT)): # PORT means -p
             port = sys.argv[sys.argv.index(PORT)+1]
     except ValueError: 
             port = DEFAULT_PORT # Default: Port 37
