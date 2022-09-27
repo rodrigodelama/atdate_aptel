@@ -221,20 +221,25 @@ def main():
         print("Port: input the desired port for the TIME_SERVER mode, in client mode it will always default to 37")
         print("Debug: input \"-d\" to trigger debug mode (log all steps taken by the program onto the terminal)")
         sys.exit(1)
-    
-    argv_str = " ".join(sys.argv)
-    #print("argv_str: ", argv_str)
 
+    ## The following are the various conditions to interpret our input with flags
+    
+    # Debugger Activation
     try:
-        if (sys.argv.index(DEBUG)):
+        if (sys.argv.index(DEBUG)): # DEBUG means -d
             debug_trigger = 1
     except ValueError:
         debug_trigger = 0
+
+    # Hostname validity check, and assignment to target
     try:
-        if (sys.argv.index(HOSTNAME)): # -s means HOSTNAME
-            # print(sys.argv.index(HOSTNAME))
+        if (sys.argv.index(HOSTNAME)): # HOSTNAME means -s
+
+            if debug_trigger == 1:
+                print("Hostname input position in argv[] is: ", sys.argv.index(HOSTNAME))
+                print("Target (hostname) has been identified as: ", sys.argv[sys.argv.index(HOSTNAME)+1])
+
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
-            # print(sys.argv[sys.argv.index(HOSTNAME)+1])
     except ValueError:
         try:
             if (sys.argv.index(MODE)):
@@ -245,57 +250,36 @@ def main():
                 print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
                 sys.exit(1)
 
+    # Mode selection and default behaviour programmed
     try:
         if (sys.argv.index(MODE)):
             mode = sys.argv[sys.argv.index(MODE)+1]
+            if debug_trigger == 1:
+                print("Mode has been identified as: ", mode)
     except ValueError:
         mode = UDP # Default: UDP client
 
+    # Port selection for server and default behaviour programmed
     try:
         if (sys.argv.index(PORT)):
             port = sys.argv[sys.argv.index(PORT)+1]
     except ValueError: 
-            port = 37 # Defaults: UDP client
+            port = DEFAULT_PORT # Default: Port 37
 
-    if (debug_trigger == 1):
-        print("argv_str: ", argv_str)
-        print("Target: ", target)
-        print("Mode: ", mode)
-
+    ## Program launch
+    # Client
     if mode == UDP or mode == TCP:
         get_current_time(target, mode, DEFAULT_PORT, debug_trigger)
+    # Server
     elif mode == TIME_SERVER:
         time_server(port, debug_trigger)
-
-'''
-OLD MANUAL STARTUP
-    if (len(sys.argv) == 3):
-        target = sys.argv[1]
-        mode = sys.argv[2] # TEMPORARY
-        # port = 37 # Default port -> TEMPORARY
-        
-        if (mode == CU):
-            mode = UDP
-            # Modo consulta UDP: -m cu
-            get_current_time(target, mode, 37, debug_trigger)
-        elif (mode == CT):
-            mode = TCP
-            # Modo consulta TCP: -m ct
-            get_current_time(target, mode, 37, debug_trigger)
-        elif (mode == TIME_SERVER):
-            # Modo servidor: -m s
-            # TODO:
-            listening_port = port
-            time_server(listening_port)
-        else:
-            print("Error: Invalid operation mode")
-            sys.exit(1)
+    # Error
     else:
-        print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
+        print("Error: Invalid operation mode")
         sys.exit(1)
-'''
-# Means we want this script to be executed, and that it's not a library.
+
+# This is how we execute main
+# The code below means we want this script to be executed, signaling Python that it's NOT a library
 if __name__ == "__main__":
     while True:
         try:
