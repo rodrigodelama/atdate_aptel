@@ -1,8 +1,8 @@
 # !/usr/bin/python3
 # atdate.py
 
-from socketserver import UDPServer
 import sys # For commandline args
+import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
 from time import gmtime # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
@@ -20,8 +20,8 @@ UDP = "UDP"
 def get_current_time(target, mode, port):
     print("Attempting to connect to:", target)
     # Get address info in a "2D" tuple
-    # Index [0] is the IP address of the desired hostname
-    # Index [-1] is the definition of the Port No. where we will open our socket
+    # Index[0] (first) is the IP address of the desired hostname
+    # Index[-1] (last) is the definition of the Port No. where we will open our socket
     server = getaddrinfo(target, port)[0][-1] # 2D 
 
     # Test print input address data:
@@ -49,7 +49,7 @@ def get_current_time(target, mode, port):
 
     sockett.close() # Close the socket
 
-    time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.hatl#struct.calcsize
+    time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
     '''
     ! tranforms our data from the network order (BE) to x64 (LE)
     I means unsigned integer (4bytes: the buffer size we need)
