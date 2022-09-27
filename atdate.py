@@ -40,12 +40,12 @@ def get_current_time(target, mode, port):
     except gaierror:
         print("Error")
 
-    # If the connection succeeds, send the empty TCP message
+    # If the connection succeeds, send the empty message (by the users choice: UDP/TCP)
     sockett.send(bytes(0))
 
     # Revieve the 4byte (32bit) current time data
     recv_data = sockett.recv(BUFFSIZE)
-    # print(recv_data) # WHAT ENCODING IS THIS ??
+    # print(recv_data) # FIXME: WHAT ENCODING IS THIS ??
 
     sockett.close() # Close the socket
 
@@ -116,6 +116,10 @@ def month(month):
         m = 'Dec'
     return m
 
+def time_server(listening_port):
+    # TODO:
+    print("TIME server running on port ", listening_port)
+
 def main():
     # client or server functionality menu should be here
     # also filter parameters here
@@ -145,13 +149,18 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     # Filter input args or instruct usage
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 7:
+        print("Error: Too many input args")
+        print("Input the IP address, and the desired protocol to contact the time server")
+        print("Usage: " + sys.argv[0] + " <IP Address> <Protocol: UDP/TCP>\n" )
+        sys.exit(1)
+    elif len(sys.argv) == 3:
         target = sys.argv[1]
         mode = sys.argv[2] # TEMPORARY
         port = 37 # Default port -> TEMPORARY
     else:
-        print("Input the IP address of the desired time server")
-        print("Usage: %s <IP Address>\n" (sys.argv[0]))
+        print("Input the IP address, and the desired protocol to contact the time server")
+        print("Usage: " + sys.argv[0] + " <IP Address> <Protocol: UDP/TCP>\n" )
         sys.exit(1)
     
     '''
@@ -166,6 +175,8 @@ def main():
     get_current_time(target, mode, port)
 
     # Modo servidor: -m s
+    # TODO:
+    # time_server(listening_port)
 
 if __name__ == "__main__":
     while True:
