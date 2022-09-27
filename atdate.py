@@ -5,7 +5,8 @@ import sys # For commandline args
 import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
 from time import gmtime # The time.pyi library has this funtion to format secconds
-import struct # To isolate our desired info from the packet with unpack()
+import struct
+from unittest.mock import DEFAULT # To isolate our desired info from the packet with unpack()
 
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
@@ -14,22 +15,26 @@ BUFSIZE = 4
 time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 
 # Constants for sepparating the different modes
-TCP = "TCP"
-UDP = "UDP"
+#TCP = "TCP"
+#UDP = "UDP"
 
 P = "-p"
 
 M = "-m"
 CU = "cu"
 CT = "ct"
+D = "-d"
 
 TIME_SERVER = "-s"
+
+DEFAULT_PORT = 37
 
 # Server constants
 SERV_BUFSIZE = 1024
 BACKLOG = 10
 
-def get_current_time(target, mode, port):
+def get_current_time(target, mode, port, debug_trigger):
+
     print("Attempting to connect to:", target)
     # Get address info in a "2D" tuple
     # Index[0] (first) is the IP address of the desired hostname
@@ -40,10 +45,10 @@ def get_current_time(target, mode, port):
     # (Format is: ('IP', PORT_NO) )
     # print(server)
 
-    if (mode == UDP):
+    if (mode == CU):
         # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
         clientSocket = socket(AF_INET, SOCK_DGRAM)
-    elif(mode == TCP):
+    elif(mode == CT):
         # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
         clientSocket = socket(AF_INET, SOCK_STREAM)
     
@@ -187,34 +192,78 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     # Filter input args or instruct usage
+
+# function next() usually used by previously running iter(), but in our case it is not needed
+
     # filter argv positions for -m -s -p and -d
+    my_port = DEFAULT_PORT
     if len(sys.argv) >= 7: # we should have at most 7 args (0-6)
         print("Error: Too many input args")
         print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: %s -m <Mode> -s <Hostname/IP Address> <Port> <Protocol> \n" % (sys.argv[0]))
+        print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>\n" % (sys.argv[0]))
+        print("Hostname/IP Address: input your desired TIME server")
+        print("Mode: cu Makes the TIME request via UDP")
+        print("      ct Makes the TIME request via TCP")
+        print("Port: input the desired port for the TIME_SERVER mode, in client mode it will always default to 37")
+        print("Debug: input \"-d\" to trigger debug mode (log all steps taken by the program onto the terminal)")
         sys.exit(1)
     
-    if ((sys.argv).find != "-m"):
-        mode = UDP
-    if ((sys.argv).find != "-s"):
-        if 
-        print("You must select Server Mode (-m s) if you do not input a hostname")
-    if ((sys.argv).find != "-p"):
-        port = 37
+    argv_str = " ".join(sys.argv)
+    #print("argv_str: ", argv_str)
 
+    try:
+        if (sys.argv.index("-d")):
+            debug_trigger = 1
+    except ValueError:
+        debug_trigger = 0
+    try:
+        if (sys.argv.index("-s")): # -s means HOSTNAME
+            # print(sys.argv.index("-s"))
+            target = sys.argv[sys.argv.index("-s")+1]
+            # print(sys.argv[sys.argv.index("-s")+1])
+    except ValueError:
+        try:
+            if (sys.argv.index("-m")):
+                print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
+                sys.exit(1)
+        except ValueError:
+            if not (sys.argv.index("cu") or sys.argv.index("ct")):
+                print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
+                sys.exit(1)
+
+    try:
+        if (sys.argv.index("-m")):
+            mode = sys.argv[sys.argv.index("-m")+1]
+    except ValueError:
+        mode = CU # Default: UDP client
+
+    try:
+        if (sys.argv.index("-p")):
+            port = sys.argv[sys.argv.index("-p")+1]
+    except ValueError: 
+            port = 37 # Defaults: UDP client
+
+    if (debug_trigger == 1):
+        print("argv_str: ", argv_str)
+        print("Target: ", target)
+        print("Mode: ", mode)
+
+    get_current_time(target, mode, 37, debug_trigger)
+
+'''
     if (len(sys.argv) == 3):
         target = sys.argv[1]
         mode = sys.argv[2] # TEMPORARY
-        port = 37 # Default port -> TEMPORARY
+        # port = 37 # Default port -> TEMPORARY
         
         if (mode == CU):
             mode = UDP
             # Modo consulta UDP: -m cu
-            get_current_time(target, mode, port)
+            get_current_time(target, mode, 37, debug_trigger)
         elif (mode == CT):
             mode = TCP
             # Modo consulta TCP: -m ct
-            get_current_time(target, mode, port)
+            get_current_time(target, mode, 37, debug_trigger)
         elif (mode == TIME_SERVER):
             # Modo servidor: -m s
             # TODO:
@@ -227,7 +276,8 @@ def main():
         print("Input the IP address, and the desired protocol to contact the time server")
         print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
         sys.exit(1)
-
+'''
+# Means we want this script to be executed, and that it's not a library.
 if __name__ == "__main__":
     while True:
         try:
