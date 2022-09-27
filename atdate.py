@@ -1,21 +1,9 @@
 # !/usr/bin/python3
 # atdate.py
 
-# AUTHOR:      Rodrigo De Lama @rodrigodelama
-#              100451775@alumnos.uc3m.es
-# DESCRIPTION: Basic TIME client script based on the outline of RFC868
-
-'''
-Time since 00:00h 1/1/1900
-Time since UNIX existance 2208988800 (1970)
-
-The server will listen for connections on port 37. When a connection
-is established, the client must send an empty packet (TCP/UDP) to which
-the server will return a 32-bit number and close the connection.
-'''
-
+from socketserver import UDPServer
 import sys # For commandline args
-from socket import socket, getaddrinfo, SOCK_STREAM, AF_INET, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
+from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
 from time import gmtime # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
 
@@ -25,16 +13,11 @@ BUFFSIZE = 4
 # Substract 2 hours, to get (CEST +2 hours)
 time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 
+# Constants for sepparating the different modes
+TCP = "TCP"
+UDP = "UDP"
 
-def get_current_time():
-    # Filter input args or instruct usage
-    if len(sys.argv) == 2:
-        target = sys.argv[1]
-    else:
-        print("Input the IP address of the desired time server")
-        print("Usage: %s <IP Address>\n" (sys.argv[0]))
-        sys.exit(1)
-
+def get_current_time(target, mode):
     print("Attempting to connect to:", target)
     # Get address info in a "2D" tuple
     # Index [0] is the IP address of the desired hostname
@@ -45,10 +28,16 @@ def get_current_time():
     # (Format is: ('IP', PORT_NO) )
     # print(server)
 
-    sockett = socket(AF_INET, SOCK_STREAM)
+    if (mode == UDP):
+        # For UDP
+        sockett = socket(AF_INET, SOCK_DGRAM)
+    elif(mode == TCP):
+        # For TCP
+        sockett = socket(AF_INET, SOCK_STREAM)
+    
     try:
         sockett.connect(server)
-    except socket.gaierror:
+    except gaierror:
         print("Error")
 
     # If the connection succeeds, send the empty TCP message
@@ -72,6 +61,7 @@ def get_current_time():
     actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it
     # print(actual_time) # We shall format this data below
     print(format_time(actual_time))
+    exit(0) # End program after succesful TIME request
 
 def format_time(actual_time):
     at = actual_time
@@ -131,8 +121,9 @@ def main():
     # also filter parameters here
 
     # program shall launch like this:
-    # atdate [-s serverhost] [-p port] [-m cu | ct | s ] [-d]
     '''
+    atdate [-s serverhost] [-p port] [-m cu | ct | s ] [-d]
+
     -s serverhost
     hostname || IP
 
@@ -148,17 +139,32 @@ def main():
         es decir: -m cu.
 
     -d: modo depuración. Mostrará trazas adicionales para la depuración del
-    programa. Si alguno de los parámetros opcionales necesarios para la 
-    ejecución no se proporciona por línea de comandos, se tomarán los valores
-    por defecto.
+    programa.
+    
+    Si alguno de los parámetros opcionales necesarios para la ejecución no se
+    proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
+    # Filter input args or instruct usage
+    if len(sys.argv) == 3:
+        target = sys.argv[1]
+        mode = sys.argv[2] # TEMPORARY
+    else:
+        print("Input the IP address of the desired time server")
+        print("Usage: %s <IP Address>\n" (sys.argv[0]))
+        sys.exit(1)
+    
+    '''
+    if (-m == cu) mode = UDP
+    elif (-m == ct) mode = TCP
+    '''
+    
+    # Modo consulta UDP: -m cu
 
-    # Modo consulta UDP
+    # get_current_time(target, UDP)
+    # Modo consulta TCP: -m ct
+    get_current_time(target, mode)
 
-    # Modo consulta TCP
-    get_current_time()
-
-    # Modo servidor
+    # Modo servidor: -m s
 
 if __name__ == "__main__":
     while True:
