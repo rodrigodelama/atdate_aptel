@@ -9,13 +9,17 @@ import struct # To isolate our desired info from the packet with unpack()
 
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
-BUFFSIZE = 4
+BUFSIZE = 4
 # Substract 2 hours, to get (CEST +2 hours)
 time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 
 # Constants for sepparating the different modes
 TCP = "TCP"
 UDP = "UDP"
+
+# Server constants
+SERV_BUFSIZE = 1024
+BACKLOG = 10
 
 def get_current_time(target, mode, port):
     print("Attempting to connect to:", target)
@@ -30,24 +34,24 @@ def get_current_time(target, mode, port):
 
     if (mode == UDP):
         # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
-        sockett = socket(AF_INET, SOCK_DGRAM)
+        clientSocket = socket(AF_INET, SOCK_DGRAM)
     elif(mode == TCP):
         # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
-        sockett = socket(AF_INET, SOCK_STREAM)
+        clientSocket = socket(AF_INET, SOCK_STREAM)
     
     try:
-        sockett.connect(server)
+        clientSocket.connect(server)
     except gaierror:
         print("Error")
 
     # If the connection succeeds, send the empty message (by the users choice: UDP/TCP)
-    sockett.send(bytes(0))
+    clientSocket.send(bytes(0))
 
     # Revieve the 4byte (32bit) current time data
-    recv_data = sockett.recv(BUFFSIZE)
+    recv_data = clientSocket.recv(BUFSIZE)
     # print(recv_data) # FIXME: WHAT ENCODING IS THIS ??
 
-    sockett.close() # Close the socket
+    clientSocket.close() # Close the socket
 
     time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
     '''
@@ -120,6 +124,32 @@ def time_server(listening_port):
     # TODO:
     print("TIME server running on port ", listening_port)
 
+#
+# From TCPServer_conc.py
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+    serverSocket.bind(('', listening_port))
+    serverSocket.listen(BACKLOG)
+
+    try:
+        connectionSocket, addr = serverSocket.accept()
+        if os.fork() == 0:
+            # child process
+            serverSocket.close()
+            message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+            while message:
+                print(message.decode())
+                connectionSocket.send(message)
+                message = connectionSocket.recv(SERV_BUFSIZE)
+            connectionSocket.close()
+            os._exit(0)
+        else:
+            # parent process
+            connectionSocket.close()
+    except:
+        serverSocket.close()
+#
+#
+
 def main():
     # client or server functionality menu should be here
     # also filter parameters here
@@ -152,7 +182,7 @@ def main():
     if len(sys.argv) >= 7:
         print("Error: Too many input args")
         print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: " + sys.argv[0] + " <IP Address> <Protocol: UDP/TCP>\n" )
+        print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
         sys.exit(1)
     elif len(sys.argv) == 3:
         target = sys.argv[1]
@@ -160,7 +190,7 @@ def main():
         port = 37 # Default port -> TEMPORARY
     else:
         print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: " + sys.argv[0] + " <IP Address> <Protocol: UDP/TCP>\n" )
+        print("Usage: %s <IP Address> <Protocol: UDP/TCP>\n" % (sys.argv[0]))
         sys.exit(1)
     
     '''
