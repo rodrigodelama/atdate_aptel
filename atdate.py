@@ -7,7 +7,7 @@ from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierr
 from time import gmtime # The time.pyi library has this funtion to format secconds
 import struct
 from unittest.mock import DEFAULT # To isolate our desired info from the packet with unpack()
-import datetime # Potentially for server
+import time
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
 BUFSIZE = 4
@@ -26,7 +26,9 @@ DEBUG = "-d"
 
 # Server constants (from: TCPServer_conc.py)
 SERV_BUFSIZE = 1024
-BACKLOG = 10
+BACKLOG = 10#KINDA WORKS AS RECEPTION WINDOW SIZE, 
+            #the backlog parameter specifies the number of pending connections the queue 
+            # #will hold.
 
 def get_current_time(target, mode, port, debug_trigger):
 
@@ -98,11 +100,12 @@ def get_current_time(target, mode, port, debug_trigger):
     '''
 
     time_since_1970 -= time_delta
-    actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it
+    actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it, transforms seconds into time_struct.
     if debug_trigger == 1:
             print("Unformatted time:", actual_time) # We will format this data below
             print("Formatted time:")
     print(format_time(actual_time))
+    print("Actual_time with time.ctime() ->",time.ctime(time_since_1970))
     if debug_trigger == 1:
             print("Success!")
     exit(0) # End program after succesful TIME request
@@ -160,7 +163,7 @@ def month(month):
         m = 'Dec'
     return m
 
-def time_server(listening_port, debug_trigger):
+def time_server(listening_port, debug_trigger): #We do it concurrent
     # TODO:
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
@@ -172,15 +175,19 @@ def time_server(listening_port, debug_trigger):
     serverSocket.listen(BACKLOG)
 
     try:
-        (connectionSocket, client_addr) = serverSocket.accept()
+        connectionSocket, client_addr = serverSocket.accept() 
         if os.fork() == 0:
             # child process
-            mytime = datetime.now()
-            message = struct.pack("<I", mytime) # Potentally will have to send in big endian.
+            mytime = time.time()
+            #maybe, time.ctime(secs) just does all the formatting for us.
+            #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
+            message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
                                                 # also try ! might work since its a network script
             serverSocket.send(message)
             serverSocket.close()
-            
+            connectionSocket.close()
+            os._exit(0)
+            #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
             # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
             '''
             while message:
@@ -193,15 +200,13 @@ def time_server(listening_port, debug_trigger):
             #
             # we have to check to recieve empty UDP messages
             
-            connectionSocket.close()
-            os._exit(0)
         else:
             # parent process
             connectionSocket.close()
     except:
         serverSocket.close()
-#
-#
+
+
 
 def main():
     # client or server functionality menu should be here
@@ -263,12 +268,12 @@ def main():
                 print("Target (hostname) has been identified as:", sys.argv[sys.argv.index(HOSTNAME)+1])
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
-    except ValueError:
+    except ValueError:#There's not a host-name of the server we want to ask the time to -> must be in server "s" mode.
         try:
             if (sys.argv.index(MODE)): # MODE means -m
                 print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
                 sys.exit(1)
-        except ValueError:
+        except ValueError:#No mode flag "-m"
             if not (sys.argv.index(UDP) or sys.argv.index(TCP)):
                 print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
                 sys.exit(1)
