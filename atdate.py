@@ -54,22 +54,26 @@ def get_current_time(target, mode, port, debug_trigger):
             print("Attempting to open TCP socket")
         # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
         clientSocket = socket(AF_INET, SOCK_STREAM)
+        try:
+            clientSocket.connect(server)
+            if debug_trigger == 1:
+                print("Connected to TIME server!")
+        except gaierror:
+            print("Error connecting to server.")
+            sys.exit(1)#TODO: look if it has to retry connection.
     
-    try:
-        clientSocket.connect(server)
-        if debug_trigger == 1:
-            print("Connected to TIME server!")
-    except gaierror:
-        print("Error")
+    
 
     # ONLY UDP: If the connection succeeds, send the empty message
+    
     if mode == UDP:
-        clientSocket.send(bytes(0))
+        clientSocket.sendto(bytes(0),server)#As we don't stablish conection like TCP, we have to send the empty paquet to the pair of IP + port. 
         if debug_trigger == 1:
-            print("Sent empty UDP message (0bytes)")
-
+            print("Sent empty UDP message (0bytes) to server:", server)
+        recv_data, server_addr = clientSocket.recvfrom(BUFSIZE)
+    elif mode == TCP:
+        recv_data = clientSocket.recv(BUFSIZE)#El cliente UDP se queda aqui y no deberia.
     # Revieve the 4byte (32bit) current time data
-    recv_data = clientSocket.recv(BUFSIZE)
 
     '''
     # POTENTIALLY UNNECESSARY
@@ -91,7 +95,7 @@ def get_current_time(target, mode, port, debug_trigger):
     if debug_trigger == 1:
         print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
     '''
-    # FIXME: sometimes, mainly while running TCP, we get an error while unpacking "struct.error: unpack requires a buffer of 4 bytes"
+
     ! tranforms our data from the network order (BE) to x64 (LE)
     > is for a generic transformation from 
     I means unsigned integer (4bytes: the buffer size we need)
@@ -109,6 +113,7 @@ def get_current_time(target, mode, port, debug_trigger):
     if debug_trigger == 1:
             print("Success!")
     exit(0) # End program after succesful TIME request
+#FORMATTING FUNCTIONS:--------------->
 
 def format_time(actual_time):
     at = actual_time
@@ -162,6 +167,7 @@ def month(month):
     elif(month == 12):
         m = 'Dec'
     return m
+#END OF FORMATTING FUNCTIONS:--------------->
 
 def time_server(listening_port, debug_trigger): #We do it concurrent
     # TODO:
@@ -173,6 +179,9 @@ def time_server(listening_port, debug_trigger): #We do it concurrent
     serverSocket = socket(AF_INET, SOCK_STREAM)
     serverSocket.bind(('', listening_port))
     serverSocket.listen(BACKLOG)
+    if(debug_trigger == 1):
+        print("TIME server setup made without errors.")
+    client_addr = None
 
     try:
         connectionSocket, client_addr = serverSocket.accept() 
@@ -189,6 +198,7 @@ def time_server(listening_port, debug_trigger): #We do it concurrent
             os._exit(0)
             #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
             # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+            #If KeyboardInterrupt is done, nothing happens. 
             '''
             while message:
                 print(message.decode())
@@ -268,15 +278,18 @@ def main():
                 print("Target (hostname) has been identified as:", sys.argv[sys.argv.index(HOSTNAME)+1])
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
-    except ValueError:#There's not a host-name of the server we want to ask the time to -> must be in server "s" mode.
+    except ValueError:#NOTE:There's not a host-name of the server we want to ask the time to -> must be in server "s" mode.
         try:
             if (sys.argv.index(MODE)): # MODE means -m
-                print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
-                sys.exit(1)
+                if sys.argv[sys.argv.index(MODE)+1] == TIME_SERVER:
+                    mode = sys.argv[sys.argv.index(MODE)+1]
+                else:
+                    print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
+                    print("Note: If there is no HOSTNAME, program must be executed in SERVER_MODE: \"-m s\"")
+                    sys.exit(1)
         except ValueError:#No mode flag "-m"
-            if not (sys.argv.index(UDP) or sys.argv.index(TCP)):
-                print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
-                sys.exit(1)
+            print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
+            sys.exit(1)# arg of this function is a non-zero value to be interpreted as an "abnormal execution"
 
     # Mode selection and default behaviour programmed
     try:
@@ -287,29 +300,17 @@ def main():
     except ValueError:
         mode = UDP # Default: UDP client
 
-    '''
-    # NEW PARAMETER EXAMPLE
-    new_param_x = ""
-    try:
-        if (sys.argv.index("-x")):
-            mode = sys.argv[sys.argv.index(MODE)+1]
-            if debug_trigger == 1:
-                print("The new parameter is:", new_param_x)
-    except ValueError:
-        mode = UDP # Default: UDP client
-    '''
-
     # Port selection for server and default behaviour programmed
     try:
         if (sys.argv.index(PORT)): # PORT means -p
-            port = sys.argv[sys.argv.index(PORT)+1]
+            port = int (sys.argv[sys.argv.index(PORT)+1])#We have to convert the port number from string to integer so it can be used by socket functions.
     except ValueError: 
             port = DEFAULT_PORT # Default: Port 37
 
     ## Program launch
     # Client
     if mode == UDP or mode == TCP:
-        get_current_time(target, mode, DEFAULT_PORT, debug_trigger)
+        get_current_time(target, mode, port, debug_trigger)#If there is no port given, it will be the DEFAULT_PORT (37).
     # Server
     elif mode == TIME_SERVER:
         time_server(port, debug_trigger)
@@ -327,3 +328,18 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
             sys.exit(1)
+
+
+
+
+    '''
+    # NEW PARAMETER EXAMPLE
+    new_param_x = ""
+    try:
+        if (sys.argv.index("-x")):
+            mode = sys.argv[sys.argv.index(MODE)+1]
+            if debug_trigger == 1:
+                print("The new parameter is:", new_param_x)
+    except ValueError:
+        mode = UDP # Default: UDP client
+    '''
