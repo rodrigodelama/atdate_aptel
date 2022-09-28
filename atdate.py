@@ -14,11 +14,7 @@ BUFSIZE = 4
 # Substract 2 hours, to get (CEST +2 hours)
 time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
 
-# Constants for sepparating the different modes
-#TCP = "TCP"
-#UDP = "UDP"
-
-
+# Constants for sepparating the different mode
 HOSTNAME = "-s"
 MODE = "-m"
 UDP = "cu"
@@ -28,7 +24,7 @@ PORT = "-p"
 DEFAULT_PORT = 37
 DEBUG = "-d"
 
-# Server constants
+# Server constants (from: TCPServer_conc.py)
 SERV_BUFSIZE = 1024
 BACKLOG = 10
 
@@ -63,22 +59,26 @@ def get_current_time(target, mode, port, debug_trigger):
     except gaierror:
         print("Error")
 
-    # If the connection succeeds, send the empty message (by the users choice: UDP/TCP)
-    clientSocket.send(bytes(0))
-    if debug_trigger == 1:
-            print("Sent empty UDP/TCP message (0bytes)")
+    # ONLY UDP: If the connection succeeds, send the empty message
+    if mode == UDP:
+        clientSocket.send(bytes(0))
+        if debug_trigger == 1:
+            print("Sent empty UDP message (0bytes)")
 
     # Revieve the 4byte (32bit) current time data
     recv_data = clientSocket.recv(BUFSIZE)
-    
+
+    '''
+    # POTENTIALLY UNNECESSARY
     while recv_data == "b\'\'": # FIXME: why is this happening ??
         try:
             recv_data = clientSocket.recv(BUFSIZE)
         except:
             struct.error
-
+    '''
+    
     if debug_trigger == 1:
-            print("RAW recieved data:", recv_data) # TODO: WHAT ENCODING IS THIS ??
+        print("RAW recieved data:", recv_data) # TODO: WHAT ENCODING IS THIS ??
 
     clientSocket.close() # Close the socket
     if debug_trigger == 1:
@@ -157,8 +157,9 @@ def month(month):
 
 def time_server(listening_port, debug_trigger):
     # TODO:
-    print("TIME server running on port", listening_port)
-
+    if(debug_trigger == 1):
+        print("TIME server running on port", listening_port)
+    
 #
 # From TCPServer_conc.py
     serverSocket = socket(AF_INET, SOCK_STREAM)
@@ -215,7 +216,7 @@ def main():
     '''
     # Filter input args or instruct usage
 
-    if len(sys.argv) >= 7: # we should have at most 7 args (0-6)
+    if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
         print("Error: Too many input args")
         print("Input the IP address, and the desired protocol to contact the time server")
         print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>\n" % (sys.argv[0]))
