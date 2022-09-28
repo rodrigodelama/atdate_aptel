@@ -7,7 +7,7 @@ from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierr
 from time import gmtime # The time.pyi library has this funtion to format secconds
 import struct
 from unittest.mock import DEFAULT # To isolate our desired info from the packet with unpack()
-
+import datetime # Potentially for server
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
 BUFSIZE = 4
@@ -30,7 +30,8 @@ BACKLOG = 10
 
 def get_current_time(target, mode, port, debug_trigger):
 
-    print("Attempting to connect to:", target)
+    if debug_trigger == 1:
+        print("Attempting to connect to:", target)
     # Get address info in a "2D" tuple
     # Index[0] (first) is the IP address of the desired hostname
     # Index[-1] (last) is the definition of the Port No. where we will open our socket
@@ -82,12 +83,15 @@ def get_current_time(target, mode, port, debug_trigger):
 
     clientSocket.close() # Close the socket
     if debug_trigger == 1:
-            print("Socket closed")
+            print("Succesful retreival: socket now closed")
 
     time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
-    # FIXME: sometimes, mainly while running TCP, we get an error while unpacking "struct.error: unpack requires a buffer of 4 bytes"
+    if debug_trigger == 1:
+        print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
     '''
+    # FIXME: sometimes, mainly while running TCP, we get an error while unpacking "struct.error: unpack requires a buffer of 4 bytes"
     ! tranforms our data from the network order (BE) to x64 (LE)
+    > is for a generic transformation from 
     I means unsigned integer (4bytes: the buffer size we need)
 
     (the combination of both "!I" is equivalent to ntohs in C)
@@ -96,7 +100,8 @@ def get_current_time(target, mode, port, debug_trigger):
     time_since_1970 -= time_delta
     actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it
     if debug_trigger == 1:
-            print("Complete formatted time:", actual_time) # We will format this data below
+            print("Unformatted time:", actual_time) # We will format this data below
+            print("Formatted time:")
     print(format_time(actual_time))
     if debug_trigger == 1:
             print("Success!")
@@ -167,15 +172,27 @@ def time_server(listening_port, debug_trigger):
     serverSocket.listen(BACKLOG)
 
     try:
-        connectionSocket, addr = serverSocket.accept()
+        (connectionSocket, client_addr) = serverSocket.accept()
         if os.fork() == 0:
             # child process
+            mytime = datetime.now()
+            message = struct.pack("<I", mytime) # Potentally will have to send in big endian.
+                                                # also try ! might work since its a network script
+            serverSocket.send(message)
             serverSocket.close()
-            message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+            
+            # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+            '''
             while message:
                 print(message.decode())
                 connectionSocket.send(message)
                 message = connectionSocket.recv(SERV_BUFSIZE)
+            '''
+
+            # we have to check for a conn in TCP
+            #
+            # we have to check to recieve empty UDP messages
+            
             connectionSocket.close()
             os._exit(0)
         else:
@@ -261,9 +278,21 @@ def main():
         if (sys.argv.index(MODE)):
             mode = sys.argv[sys.argv.index(MODE)+1]
             if debug_trigger == 1:
-                print("Mode has been identified as: ", mode)
+                print("Mode has been identified as:", mode)
     except ValueError:
         mode = UDP # Default: UDP client
+
+    '''
+    # NEW PARAMETER EXAMPLE
+    new_param_x = ""
+    try:
+        if (sys.argv.index("-x")):
+            mode = sys.argv[sys.argv.index(MODE)+1]
+            if debug_trigger == 1:
+                print("The new parameter is:", new_param_x)
+    except ValueError:
+        mode = UDP # Default: UDP client
+    '''
 
     # Port selection for server and default behaviour programmed
     try:
