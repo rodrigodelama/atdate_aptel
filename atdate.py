@@ -4,9 +4,8 @@
 import sys # For commandline args
 import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
-from time import gmtime # The time.pyi library has this funtion to format secconds
-import struct
-from unittest.mock import DEFAULT # To isolate our desired info from the packet with unpack()
+from time import gmtime, time # The time.pyi library has this funtion to format secconds
+import struct # To isolate our desired info from the packet with unpack()
 import time
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
@@ -26,9 +25,9 @@ DEBUG = "-d"
 
 # Server constants (from: TCPServer_conc.py)
 SERV_BUFSIZE = 1024
-BACKLOG = 10#KINDA WORKS AS RECEPTION WINDOW SIZE, 
-            #the backlog parameter specifies the number of pending connections the queue 
-            # #will hold.
+BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
+                # the backlog parameter specifies the number
+                # of pending connections the queue will hold.
 
 def get_current_time(target, mode, port, debug_trigger):
 
@@ -62,6 +61,8 @@ def get_current_time(target, mode, port, debug_trigger):
     except gaierror:
         print("Error")
 
+    # FIXME: see packet argparses
+
     # ONLY UDP: If the connection succeeds, send the empty message
     if mode == UDP:
         clientSocket.send(bytes(0))
@@ -70,15 +71,6 @@ def get_current_time(target, mode, port, debug_trigger):
 
     # Revieve the 4byte (32bit) current time data
     recv_data = clientSocket.recv(BUFSIZE)
-
-    '''
-    # POTENTIALLY UNNECESSARY
-    while recv_data == "b\'\'": # FIXME: why is this happening ??
-        try:
-            recv_data = clientSocket.recv(BUFSIZE)
-        except:
-            struct.error
-    '''
     
     if debug_trigger == 1:
         print("RAW recieved data:", recv_data) # TODO: WHAT ENCODING IS THIS ??
@@ -98,16 +90,16 @@ def get_current_time(target, mode, port, debug_trigger):
 
     (the combination of both "!I" is equivalent to ntohs in C)
     '''
-
     time_since_1970 -= time_delta
     actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it, transforms seconds into time_struct.
     if debug_trigger == 1:
             print("Unformatted time:", actual_time) # We will format this data below
             print("Formatted time:")
     print(format_time(actual_time))
-    print("Actual_time with time.ctime() ->",time.ctime(time_since_1970))
     if debug_trigger == 1:
-            print("Success!")
+        # Carlos usa: time.ctime
+        print("TEST: Actual_time with time.ctime() ->", time.ctime(time_since_1970))
+        print("Success!")
     exit(0) # End program after succesful TIME request
 
 def format_time(actual_time):
@@ -163,7 +155,7 @@ def month(month):
         m = 'Dec'
     return m
 
-def time_server(listening_port, debug_trigger): #We do it concurrent
+def time_server(listening_port, debug_trigger): # We do it concurrent
     # TODO:
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
@@ -175,7 +167,7 @@ def time_server(listening_port, debug_trigger): #We do it concurrent
     serverSocket.listen(BACKLOG)
 
     try:
-        connectionSocket, client_addr = serverSocket.accept() 
+        (connectionSocket, client_addr) = serverSocket.accept()
         if os.fork() == 0:
             # child process
             mytime = time.time()
@@ -268,14 +260,14 @@ def main():
                 print("Target (hostname) has been identified as:", sys.argv[sys.argv.index(HOSTNAME)+1])
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
-    except ValueError:#There's not a host-name of the server we want to ask the time to -> must be in server "s" mode.
+    except ValueError: # If a hostname is not entered -> must be in server "s" mode.
         try:
-            if (sys.argv.index(MODE)): # MODE means -m
-                print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
-                sys.exit(1)
-        except ValueError:#No mode flag "-m"
-            if not (sys.argv.index(UDP) or sys.argv.index(TCP)):
+            if (sys.argv.index(UDP) or sys.argv.index(TCP)):
                 print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
+                sys.exit(1)
+        except ValueError:
+            if not (sys.argv.index(MODE) == TIME_SERVER): # MODE means -m
+                print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
                 sys.exit(1)
 
     # Mode selection and default behaviour programmed
