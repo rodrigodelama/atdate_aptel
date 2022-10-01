@@ -1,6 +1,7 @@
 # !/usr/bin/python3
 # atdate.py
 
+import argparse
 import sys # For commandline args
 import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
@@ -76,6 +77,7 @@ def get_current_time(target, mode, port, debug_trigger):
         print("RAW recieved data:", recv_data) # TODO: WHAT ENCODING IS THIS ??
 
     clientSocket.close() # Close the socket
+    
     if debug_trigger == 1:
             print("Succesful retreival: socket now closed")
 
@@ -83,7 +85,11 @@ def get_current_time(target, mode, port, debug_trigger):
     if debug_trigger == 1:
         print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
     '''
-    # FIXME: sometimes, mainly while running TCP, we get an error while unpacking "struct.error: unpack requires a buffer of 4 bytes"
+    # FIXME:
+    # Sometimes when running TCP, we get an error "struct.error: unpack requires a buffer of 4 bytes"
+    # This is due to the server sending us an empty message after multiple succesive requests
+    # The server also sometimes reply a string that makes our program believe its 1900
+
     ! tranforms our data from the network order (BE) to x64 (LE)
     > is for a generic transformation from 
     I means unsigned integer (4bytes: the buffer size we need)
@@ -91,71 +97,13 @@ def get_current_time(target, mode, port, debug_trigger):
     (the combination of both "!I" is equivalent to ntohs in C)
     '''
     time_since_1970 -= time_delta
-    actual_time = gmtime(time_since_1970) # easier to yank the desired data and format it, transforms seconds into time_struct.
+    # Carlos usa: time.ctime
+    print( time.ctime(time_since_1970).replace(" 2022", " CET 2022") ) # Find a way to automate the year
     if debug_trigger == 1:
-            print("Unformatted time:", actual_time) # We will format this data below
-            print("Formatted time:")
-    print(format_time(actual_time))
-    if debug_trigger == 1:
-        # Carlos usa: time.ctime
-        print("TEST: Actual_time with time.ctime() ->", time.ctime(time_since_1970))
         print("Success!")
     exit(0) # End program after succesful TIME request
 
-def format_time(actual_time):
-    at = actual_time
-    s = str(weekday(at[6])+" "+month(at[1])+" "+str(at[2])+" "+
-            str(at[3])+":"+str(at[4])+":"+ str(at[5])+" CET "+str(at[0]))
-    return s
-
-def weekday(day):
-    d = ''
-    # no "switch" in python
-    if(day == 0):
-        d = 'Mon'
-    elif(day == 1):
-        d = 'Tue'
-    elif(day == 2):
-        d = 'Wed'
-    elif(day == 3):
-        d = 'Thu'
-    elif(day == 4):
-        d = 'Fri'
-    elif(day == 5):
-        d = 'Sat'
-    elif(day == 6):
-        d = 'Sun'
-    return d
-
-def month(month):
-    m = ''
-    if(month == 1):
-        m = 'Jan'
-    elif(month == 2):
-        m = 'Feb'
-    elif(month == 3):
-        m = 'Mar'
-    elif(month == 4):
-        m = 'Apr'
-    elif(month == 5):
-        m = 'May'
-    elif(month == 6):
-        m = 'Jun'
-    elif(month == 7):
-        m = 'Jul'
-    elif(month == 8):
-        m = 'Aug'
-    elif(month == 9):
-        m = 'Sep'
-    elif(month == 10):
-        m = 'Oct'
-    elif(month == 11):
-        m = 'Nov'
-    elif(month == 12):
-        m = 'Dec'
-    return m
-
-def time_server(listening_port, debug_trigger): # We do it concurrent
+def time_server(listening_port, debug_trigger): # The server is concurrent
     # TODO:
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
@@ -173,7 +121,7 @@ def time_server(listening_port, debug_trigger): # We do it concurrent
             mytime = time.time()
             #maybe, time.ctime(secs) just does all the formatting for us.
             #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
-            message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
+            message = struct.pack("<I", mytime) # Potentally will have to send in big endian. (yes)
                                                 # also try ! might work since its a network script
             serverSocket.send(message)
             serverSocket.close()
