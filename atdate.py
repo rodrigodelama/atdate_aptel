@@ -1,7 +1,6 @@
 # !/usr/bin/python3
 # atdate.py
 
-from cmath import pi
 import sys # For commandline args
 import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
