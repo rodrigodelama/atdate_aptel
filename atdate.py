@@ -63,7 +63,7 @@ def get_current_time(target, mode, port, debug_trigger):
         print("Error")
 
     # FIXME: see packet argparses
-    
+    #argparse.ArgumentParser
     # ONLY UDP: If the connection succeeds, send the empty message
     if mode == UDP:
         clientSocket.send(bytes(0))
@@ -107,44 +107,45 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     # TODO:
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
-    
-#
-# From TCPServer_conc.py
+
+    # From TCPServer_conc.py
     serverSocket = socket(AF_INET, SOCK_STREAM)
-    serverSocket.bind(('', listening_port))
+    serverSocket.bind(('', int(listening_port)))
     serverSocket.listen(BACKLOG)
+    while True:
+        try:
+            (connectionSocket, client_addr) = serverSocket.accept()
+            if os.fork() == 0:
+                # child process
+                mytime = time.time()
+                #maybe, time.ctime(secs) just does all the formatting for us.
+                #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
+                message = struct.pack("<I", mytime) # Potentally will have to send in big endian. (yes)
+                                                    # also try ! might work since its a network script
+                serverSocket.send(message)
+                serverSocket.close()
+                connectionSocket.close()
+                os._exit(0)
+                #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
+                # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+                '''
+                while message:
+                    print(message.decode())
+                    connectionSocket.send(message)
+                    message = connectionSocket.recv(SERV_BUFSIZE)
+                '''
 
-    try:
-        (connectionSocket, client_addr) = serverSocket.accept()
-        if os.fork() == 0:
-            # child process
-            mytime = time.time()
-            #maybe, time.ctime(secs) just does all the formatting for us.
-            #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
-            message = struct.pack("<I", mytime) # Potentally will have to send in big endian. (yes)
-                                                # also try ! might work since its a network script
-            serverSocket.send(message)
-            serverSocket.close()
-            connectionSocket.close()
-            os._exit(0)
-            #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
-            # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
-            '''
-            while message:
-                print(message.decode())
-                connectionSocket.send(message)
-                message = connectionSocket.recv(SERV_BUFSIZE)
-            '''
-
-            # we have to check for a conn in TCP
-            #
-            # we have to check to recieve empty UDP messages
-            
-        else:
-            # parent process
-            connectionSocket.close()
-    except:
-        serverSocket.close()
+                # we have to check for a conn in TCP
+                #
+                # we have to check to recieve empty UDP messages
+                
+            else:
+                # parent process
+                connectionSocket.close()
+        except KeyboardInterrupt:
+            print("\nSIGINT received, closing server")
+            break
+    connectionSocket.close()
 
 def main():
     # client or server functionality menu should be here
@@ -175,7 +176,8 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     # Filter input args or instruct usage
-    if len(sys.argv) == 1:
+    
+    if len(sys.argv) == 1: # no input args
         usage()
         sys.exit(1)
 
@@ -203,15 +205,10 @@ def main():
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
     except ValueError: # If a hostname is not entered -> must be in server "s" mode.
-        try:
-            if (sys.argv.index(UDP) or sys.argv.index(TCP)):
-                print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
-                sys.exit(1)
-        except ValueError:
-            if not (sys.argv.index(MODE) == TIME_SERVER): # MODE means -m
-                print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
-                print("Input the IP address, and the desired protocol to contact the time server")
-                sys.exit(1)
+        if not (sys.argv[sys.argv.index(MODE)+1] == TIME_SERVER): # MODE means -m
+            print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
+            print("Additionally you may add a custom port number, otherwise it will run at the default port 37")
+            sys.exit(1)
 
     # Mode selection and default behaviour programmed
     try:
@@ -238,7 +235,7 @@ def main():
     try:
         if (sys.argv.index(PORT)): # PORT means -p
             port = sys.argv[sys.argv.index(PORT)+1]
-    except ValueError: 
+    except ValueError:
             port = DEFAULT_PORT # Default: Port 37
 
     ## Program launch
