@@ -126,6 +126,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # child process
                 mytime = time.time()
                 if debug_trigger == 1:
+                    print(type(mytime))
                     print(mytime)
                 #maybe, time.ctime(secs) just does all the formatting for us.
                 #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
