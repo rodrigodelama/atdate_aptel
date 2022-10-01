@@ -124,13 +124,16 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
         try:
             if os.fork() == 0:
                 # child process
-                mytime = time.time()
+                mytime = int(time.time())
                 if debug_trigger == 1:
                     print(type(mytime))
                     print(mytime)
+                mytime += time_delta
+                if debug_trigger == 1:
+                    print("time plus time delta:", mytime)
                 #maybe, time.ctime(secs) just does all the formatting for us.
                 #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
-                message = struct.pack("<I", mytime) # Potentally will have to send in big endian. (yes)
+                message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
                                                     # also try ! might work since its a network script
                 server_socket.send(message)
                 server_socket.close()
