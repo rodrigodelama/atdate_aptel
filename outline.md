@@ -36,8 +36,7 @@ En el caso de ejecución como **cliente UDP**, el programa operará tal y como s
 
 - -p port: para indicar el número de puerto.
   - Si se arranca en modo consulta, indica que el servidor TIME al que nos conectamos escucha en un puerto diferente al 37.
-  - Si se arranca en modo servidor, indica el puerto en el que quedará a la escucha el servidor.
-  - Si no se especifica se usará el puerto por defecto, es decir, 37.
+  - Si se arranca en modo servidor, indica el puerto en el que quedará a la escucha el servidor. Si no se especifica se usará el puerto por defecto, es decir, 37.
 
 - -d: modo depuración. Mostrará trazas adicionales para la depuración del programa.
 Si alguno de los parámetros opcionales necesarios para la ejecución no se proporciona por línea de comandos, se tomarán los valores por defecto.
