@@ -58,26 +58,30 @@ def get_current_time(target, mode, port, debug_trigger):
             print("Succesful retreival: socket now closed")
         exit(0) # End program after succesful TIME request
     elif (mode == TCP):
-        if debug_trigger == 1:
-            print("Attempting to open TCP socket")
-        # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
-        client_socket = socket(AF_INET, SOCK_STREAM)
-        # Only in TCP do we handshake with the server
-        try:
-            client_socket.connect(server)
-            if debug_trigger == 1:
-                print("TCP handshake successful with TIME server!")
-            # Loop until SIGNINT - FIXME: BWOKEN 
-            while True:
+        # Loop until SIGNINT
+        while True:
+            try:
+                if debug_trigger == 1:
+                    print("Attempting to open TCP socket")
+                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+
+                # We must declare a new socket for each connection because the server closes
+                # the socket with us after each request as per the RFC, so we must make a new one
+                client_socket = socket(AF_INET, SOCK_STREAM)
+                
+                client_socket.connect(server) # Only in TCP do we handshake with the server
+                if debug_trigger == 1:
+                    print("TCP handshake successful with TIME server!")
                 try:
                     time_recieve(client_socket, debug_trigger)
+                    sleep(1)
                 except KeyboardInterrupt:
                     client_socket.close()
                     print("\nSIGINT received, closing TCP connection")
-                    break
-        except gaierror:
-            print("Error")
-            sys.exit(1)
+                    exit(1)
+            except gaierror:
+                print("Error")
+                exit(1)
 
     # TODO: see packet argparse
     # argparse.ArgumentParser
@@ -100,7 +104,7 @@ def time_recieve(client_socket, debug_trigger):
     '''
     time_since_1970 -= time_delta # we subtract when receiving
     # Carlos usa: time.ctime
-    print( time.ctime(time_since_1970).replace(" 2022", " CET 2022") ) # Find a way to automate the year
+    print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
     if debug_trigger == 1:
         print("Success!")
 
@@ -182,11 +186,11 @@ def main():
     
     if len(sys.argv) == 1: # no input args
         usage()
-        sys.exit(1)
+        exit(1)
 
     if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
         usage()
-        sys.exit(1)
+        exit(1)
 
     ## The following are the various conditions to interpret our input with flags
     # We will filter argv positions for -m -s -p and -d
@@ -211,7 +215,7 @@ def main():
         if (sys.argv[sys.argv.index(MODE)+1] != TIME_SERVER): # MODE means -m
             print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
             print("Additionally you may add a custom port number, otherwise it will run at the default port 37")
-            sys.exit(1)
+            exit(1)
 
     # Mode selection and default behaviour programmed
     try:
@@ -251,7 +255,7 @@ def main():
     # Error
     else:
         print("Error: Invalid operation mode")
-        sys.exit(1)
+        exit(1)
 
 def usage():
     print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>" % (sys.argv[0]))
@@ -269,4 +273,4 @@ if __name__ == "__main__":
             main()
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
-            sys.exit(1)
+            exit(1)
