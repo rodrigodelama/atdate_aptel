@@ -63,7 +63,7 @@ def get_current_time(target, mode, port, debug_trigger):
         print("Error")
 
     # FIXME: see packet argparses
-
+    
     # ONLY UDP: If the connection succeeds, send the empty message
     if mode == UDP:
         clientSocket.send(bytes(0))
@@ -146,8 +146,6 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     except:
         serverSocket.close()
 
-
-
 def main():
     # client or server functionality menu should be here
     # also filter parameters here
@@ -177,16 +175,12 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     # Filter input args or instruct usage
+    if len(sys.argv) == 1:
+        usage()
+        sys.exit(1)
 
     if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
-        print("Error: Too many input args")
-        print("Input the IP address, and the desired protocol to contact the time server")
-        print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>\n" % (sys.argv[0]))
-        print("Hostname/IP Address: input your desired TIME server")
-        print("Mode: cu Makes the TIME request via UDP")
-        print("      ct Makes the TIME request via TCP")
-        print("Port: input the desired port for the TIME_SERVER mode, in client mode it will always default to 37")
-        print("Debug: input \"-d\" to trigger debug mode (log all steps taken by the program onto the terminal)")
+        usage()
         sys.exit(1)
 
     ## The following are the various conditions to interpret our input with flags
@@ -216,6 +210,7 @@ def main():
         except ValueError:
             if not (sys.argv.index(MODE) == TIME_SERVER): # MODE means -m
                 print("Error: You must at least enter a HOSTNAME to run with default settings, as a client making a UDP request")
+                print("Input the IP address, and the desired protocol to contact the time server")
                 sys.exit(1)
 
     # Mode selection and default behaviour programmed
@@ -257,6 +252,14 @@ def main():
     else:
         print("Error: Invalid operation mode")
         sys.exit(1)
+
+def usage():
+    print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>" % (sys.argv[0]))
+    print("Hostname/IP Address: input your desired TIME server")
+    print("Mode: cu Makes the TIME request via UDP")
+    print("      ct Makes the TIME request via TCP")
+    print("Port: input the desired port for the TIME_SERVER mode, in client mode it will always default to 37")
+    print("Debug: input \"-d\" to trigger debug mode (log all steps taken by the program onto the terminal)")
 
 # This is how we execute main
 # The code below means we want this script to be executed, signaling Python that it's NOT a library
