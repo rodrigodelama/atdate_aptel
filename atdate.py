@@ -113,110 +113,42 @@ def get_current_time(target, mode, port, debug_trigger):
     if debug_trigger == 1:
             print("Success!")
     exit(0) # End program after succesful TIME request
-#FORMATTING FUNCTIONS:--------------->
-
-def format_time(actual_time):
-    at = actual_time
-    s = str(weekday(at[6])+" "+month(at[1])+" "+str(at[2])+" "+
-            str(at[3])+":"+str(at[4])+":"+ str(at[5])+" CET "+str(at[0]))
-    return s
-
-def weekday(day):
-    d = ''
-    # no "switch" in python
-    if(day == 0):
-        d = 'Mon'
-    elif(day == 1):
-        d = 'Tue'
-    elif(day == 2):
-        d = 'Wed'
-    elif(day == 3):
-        d = 'Thu'
-    elif(day == 4):
-        d = 'Fri'
-    elif(day == 5):
-        d = 'Sat'
-    elif(day == 6):
-        d = 'Sun'
-    return d
-
-def month(month):
-    m = ''
-    if(month == 1):
-        m = 'Jan'
-    elif(month == 2):
-        m = 'Feb'
-    elif(month == 3):
-        m = 'Mar'
-    elif(month == 4):
-        m = 'Apr'
-    elif(month == 5):
-        m = 'May'
-    elif(month == 6):
-        m = 'Jun'
-    elif(month == 7):
-        m = 'Jul'
-    elif(month == 8):
-        m = 'Aug'
-    elif(month == 9):
-        m = 'Sep'
-    elif(month == 10):
-        m = 'Oct'
-    elif(month == 11):
-        m = 'Nov'
-    elif(month == 12):
-        m = 'Dec'
-    return m
-#END OF FORMATTING FUNCTIONS:--------------->
 
 def time_server(listening_port, debug_trigger): #We do it concurrent
     # TODO:
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
-    
-#
-# From TCPServer_conc.py
+
+    # From TCPServer_conc.py
     serverSocket = socket(AF_INET, SOCK_STREAM)
     serverSocket.bind(('', listening_port))
     serverSocket.listen(BACKLOG)
-    if(debug_trigger == 1):
-        print("TIME server setup made without errors.")
-    client_addr = None
-
-    try:
-        connectionSocket, client_addr = serverSocket.accept() 
-        if os.fork() == 0:
-            # child process
-            mytime = time.time()
-            #maybe, time.ctime(secs) just does all the formatting for us.
-            #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
-            message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
-                                                # also try ! might work since its a network script
-            serverSocket.send(message)
-            serverSocket.close()
-            connectionSocket.close()
-            os._exit(0)
-            #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
-            # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
-            #If KeyboardInterrupt is done, nothing happens. 
-            '''
-            while message:
-                print(message.decode())
-                connectionSocket.send(message)
-                message = connectionSocket.recv(SERV_BUFSIZE)
-            '''
-
-            # we have to check for a conn in TCP
-            #
-            # we have to check to recieve empty UDP messages
-            
-        else:
-            # parent process
-            connectionSocket.close()
-    except:
-        serverSocket.close()
-
-
+    while True:
+        try:
+            (connectionSocket, client_addr) = serverSocket.accept()
+            if os.fork() == 0:
+                # child process
+                mytime = time.time()
+                #maybe, time.ctime(secs) just does all the formatting for us.
+                #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
+                message = struct.pack("<I", mytime) # Potentally will have to send in big endian. (yes)
+                                                    # also try ! might work since its a network script
+                serverSocket.send(message)
+                serverSocket.close()
+                connectionSocket.close()
+                os._exit(0)
+                #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
+                # message = connectionSocket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
+                # we have to check for a conn in TCP
+                #
+                # we have to check to recieve empty UDP messages
+            else:
+                # parent process
+                connectionSocket.close()
+        except KeyboardInterrupt:
+            print("\nSIGINT received, closing server")
+            break
+    connectionSocket.close()
 
 def main():
     # client or server functionality menu should be here
@@ -303,9 +235,24 @@ def main():
     # Port selection for server and default behaviour programmed
     try:
         if (sys.argv.index(PORT)): # PORT means -p
-            port = int (sys.argv[sys.argv.index(PORT)+1])#We have to convert the port number from string to integer so it can be used by socket functions.
-    except ValueError: 
-            port = DEFAULT_PORT # Default: Port 37
+            port = int(sys.argv[sys.argv.index(PORT)+1])
+    except ValueError:
+        if (sys.argv[sys.argv.index(MODE)+1] == TIME_SERVER):
+            print("You must input a port number (bigger than 1024, lower are reserved) to spool up the server")
+            exit(1)
+        port = DEFAULT_PORT # Default: Port 37
+
+    '''
+    # NEW PARAMETER EXAMPLE
+    new_param_x = ""
+    try:
+        if (sys.argv.index("-x")):
+            mode = sys.argv[sys.argv.index(MODE)+1]
+            if debug_trigger == 1:
+                print("The new parameter is:", new_param_x)
+    except ValueError:
+        # Input default behaviour if the new parameter is NOT present in argv
+    '''
 
     ## Program launch
     # Client
@@ -328,18 +275,7 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
             sys.exit(1)
-
-
-
-
-    '''
-    # NEW PARAMETER EXAMPLE
-    new_param_x = ""
-    try:
-        if (sys.argv.index("-x")):
-            mode = sys.argv[sys.argv.index(MODE)+1]
-            if debug_trigger == 1:
-                print("The new parameter is:", new_param_x)
-    except ValueError:
-        mode = UDP # Default: UDP client
-    '''
+ main()
+        except KeyboardInterrupt:
+            print("\nSIGINT received, closing program")
+            sys.exit(1)
