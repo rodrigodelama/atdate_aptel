@@ -121,10 +121,12 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
         exit(1)
     server_socket.listen(BACKLOG)
     while True:
-        connection_socket = server_socket.accept() # had ",client_addr" possibly add back
+        connection_socket, client_addr = server_socket.accept()
         try:
             if os.fork() == 0:
                 # child process
+                server_socket.close()
+
                 mytime = int(time.time())
                 if debug_trigger == 1:
                     print(type(mytime))
@@ -136,8 +138,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
                 message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
                                                     # also try ! might work since its a network script
-                server_socket.send(message)
-                server_socket.close()
+                connection_socket.send(message)
                 connection_socket.close()
                 os._exit(0)
                 #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
