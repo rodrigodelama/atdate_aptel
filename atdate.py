@@ -4,14 +4,14 @@
 import sys # For commandline args
 import os
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
-from time import gmtime, time # The time.pyi library has this funtion to format secconds
+from time import gmtime, sleep, time # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
 import time
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
 BUFSIZE = 4
-# Substract 2 hours, to get (CEST +2 hours)
-time_delta = 2208988800 - 3600*2 # GMT - 2 hours for CET
+time_delta = 2208988800 #- 3600*2 # GMT - 2 hours for CET (We think that )
+# We used to substract 2 hours, to get CEST (+2 hours) why not anymore??
 
 # Constants for sepparating the different mode
 HOSTNAME = "-s"
@@ -45,7 +45,7 @@ def get_current_time(target, mode, port, debug_trigger):
 
     if (mode == UDP):
         if debug_trigger == 1:
-            print("Attempting to open UDP socket")
+            print("Attempting to open UDP socket...")
         # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
         client_socket = socket(AF_INET, SOCK_DGRAM)
         # Only in UDP do we send the empty message to "server" (tuple with (addr,port))
@@ -53,8 +53,11 @@ def get_current_time(target, mode, port, debug_trigger):
         if debug_trigger == 1:
             print("Sent empty UDP message (0bytes)")
         time_recieve(client_socket, debug_trigger)
+        client_socket.close()
+        if debug_trigger == 1:
+            print("Succesful retreival: socket now closed")
         exit(0) # End program after succesful TIME request
-    elif(mode == TCP):
+    elif (mode == TCP):
         if debug_trigger == 1:
             print("Attempting to open TCP socket")
         # We will create the socket w/ SOCK_STREAM - TCP sends streams of bytes
@@ -64,18 +67,19 @@ def get_current_time(target, mode, port, debug_trigger):
             client_socket.connect(server)
             if debug_trigger == 1:
                 print("TCP handshake successful with TIME server!")
+            # Loop until SIGNINT - FIXME: BWOKEN 
+            while True:
+                try:
+                    time_recieve(client_socket, debug_trigger)
+                except KeyboardInterrupt:
+                    client_socket.close()
+                    print("\nSIGINT received, closing TCP connection")
+                    break
         except gaierror:
             print("Error")
             sys.exit(1)
-        # Loop until SIGNINT - FIXME: BWOKEN 
-        while True:
-            try:
-                time_recieve(client_socket, debug_trigger)
-            except KeyboardInterrupt:
-                print("\nSIGINT received, closing TCP connection")
-                break
 
-    # FIXME: see packet argparse
+    # TODO: see packet argparse
     # argparse.ArgumentParser
 
 def time_recieve(client_socket, debug_trigger):
@@ -86,22 +90,15 @@ def time_recieve(client_socket, debug_trigger):
     if debug_trigger == 1:
         print("RAW recieved data:", recv_data) # WHAT ENCODING IS THIS ??
 
-    client_socket.close() # Close the socket
-    
-    if debug_trigger == 1:
-            print("Succesful retreival: socket now closed")
-
     time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
     if debug_trigger == 1:
         print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
     '''
     ! tranforms our data from the network order (BE) to x64 (LE)
-    > is for a generic transformation from 
     I means unsigned integer (4bytes: the buffer size we need)
-
     (the combination of both "!I" is equivalent to ntohs in C)
     '''
-    time_since_1970 -= time_delta
+    time_since_1970 -= time_delta # we subtract when receiving
     # Carlos usa: time.ctime
     print( time.ctime(time_since_1970).replace(" 2022", " CET 2022") ) # Find a way to automate the year
     if debug_trigger == 1:
@@ -120,7 +117,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
         exit(1)
     server_socket.listen(BACKLOG)
     while True:
-        connection_socket, client_addr = server_socket.accept()
+        connection_socket = server_socket.accept() # had ",client_addr" possibly add back
         try:
             if os.fork() == 0:
                 # child process
@@ -128,7 +125,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 if debug_trigger == 1:
                     print(type(mytime))
                     print(mytime)
-                mytime += time_delta
+                mytime += time_delta # we add when sending
                 if debug_trigger == 1:
                     print("time plus time delta:", mytime)
                 #maybe, time.ctime(secs) just does all the formatting for us.
