@@ -138,6 +138,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
                 message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
                                                     # also try ! might work since its a network script
+                print("Attending request...")
                 connection_socket.send(message)
                 connection_socket.close()
                 os._exit(0)
@@ -151,6 +152,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # parent process
                 connection_socket.close()
         except KeyboardInterrupt:
+            connection_socket.close()
             print("\nSIGINT received, closing server")
             break
     server_socket.close()
