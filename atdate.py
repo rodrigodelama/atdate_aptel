@@ -152,21 +152,20 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # child process
                 tcp_server_socket.close()
 
-                mytime = int(time.time())
-                if debug_trigger == 1:
-                    print("Local time:", mytime)
-                mytime += time_delta # we add when sending
-                if debug_trigger == 1:
-                    print("Time plus time delta:", mytime)
-
-                message = struct.pack("!I", mytime)
-                # Sent in big endian with !, which changes to and from network order
-
-                print("Attending request...")
                 while True:
+                    mytime = int(time.time())
+                    if debug_trigger == 1:
+                        print("Local time:", mytime)
+                    mytime += time_delta # we add when sending
+                    if debug_trigger == 1:
+                        print("Time plus time delta:", mytime)
+
+                    message = struct.pack("!I", mytime)
+                    # Sent in big endian with !, which changes to and from network order
+
+                    print("Attending request...")
                     connection_socket.send(message)
                     sleep(1)
-                    os._exit(0)
             else:
                 # parent process
                 connection_socket.close()
