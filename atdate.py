@@ -86,8 +86,7 @@ def get_current_time(target, mode, port, debug_trigger):
                     print("TCP handshake successful with TIME server!")
                     
                 try:
-                        time_recieve(client_socket, debug_trigger)
-                        sleep(1)
+                    time_recieve(client_socket, debug_trigger)
                 except KeyboardInterrupt:
                     client_socket.close()
                     print("\nSIGINT received, closing client-side TCP connection")
@@ -170,6 +169,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                 print("Attending request...")
                 connection_socket.send(message)
+                sleep(1)
                 # connection_socket.close()
                 os._exit(0)
                 
