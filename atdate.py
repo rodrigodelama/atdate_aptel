@@ -87,9 +87,9 @@ def get_current_time(target, mode, port, debug_trigger):
             while True:
                 try:
                     time_recieve(client_socket, debug_trigger)
-                except KeyboardInterrupt:
+                except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
-                    print("\nSIGINT received, closing program")
+                    print("Closing program")
                     exit(1)
         except gaierror:
             print("Error")
@@ -106,7 +106,7 @@ def time_recieve(client_socket, debug_trigger):
         print("RAW recieved data:", recv_data) # WHAT ENCODING IS THIS ??
         print("Data size:", sys.getsizeof(recv_data))
 
-    if sys.getsizeof(recv_data) == 37:
+    try:
         time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
         '''
         ! tranforms our data from the network order (BE) to x64 (LE)
@@ -125,8 +125,8 @@ def time_recieve(client_socket, debug_trigger):
         
         if debug_trigger == 1:
             print("Success!")
-    else:
-        print("Server closed connection, requesting time again...")
+    except struct.error: # detects when the struct is 0 bytes
+        print("Server closed the connection, closing socket...")
         client_socket.close()
 
 
