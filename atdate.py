@@ -126,8 +126,8 @@ def time_recieve(client_socket, debug_trigger):
         print("Success!")
 
 def time_server(listening_port, debug_trigger): # The server is concurrent
-    if(debug_trigger == 1):
-        print("TIME server running on port", listening_port)
+
+    print("TIME server running on port", listening_port)
 
     # Inspired on TCPServer_conc.py
 
