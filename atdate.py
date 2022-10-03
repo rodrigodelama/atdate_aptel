@@ -79,19 +79,19 @@ def get_current_time(target, mode, port, debug_trigger):
             # We must declare a new socket for each connection because the server closes
             # the socket with us after each request as per the RFC, so we must make a new one
 
-            client_socket.connect(server) # Only in TCP do we handshake with the server
+            while True:
+                client_socket.connect(server) # Only in TCP do we handshake with the server
 
-            if debug_trigger == 1:
-                print("TCP handshake successful with TIME server!")
-                
-            try:
-                while True:
-                    time_recieve(client_socket, debug_trigger)
-                    sleep(1)
-            except KeyboardInterrupt:
-                client_socket.close()
-                print("\nSIGINT received, closing client-side TCP connection")
-                exit(1)
+                if debug_trigger == 1:
+                    print("TCP handshake successful with TIME server!")
+                    
+                try:
+                        time_recieve(client_socket, debug_trigger)
+                        sleep(1)
+                except KeyboardInterrupt:
+                    client_socket.close()
+                    print("\nSIGINT received, closing client-side TCP connection")
+                    exit(1)
         except gaierror:
             print("Error")
             exit(1)
