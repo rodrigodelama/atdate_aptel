@@ -81,10 +81,10 @@ def get_current_time(target, mode, port, debug_trigger):
 
             client_socket.connect(server) # Only in TCP do we handshake with the server
 
+            if debug_trigger == 1:
+                print("TCP handshake successful with TIME server!")
+            
             while True:
-                if debug_trigger == 1:
-                    print("TCP handshake successful with TIME server!")
-                
                 try:
                     time_recieve(client_socket, debug_trigger)
                 except KeyboardInterrupt:
@@ -135,20 +135,15 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     print("TIME server running on port", listening_port)
 
     # Inspired on TCPServer_conc.py
-
-    # Create both socket types
     tcp_server_socket = socket(AF_INET, SOCK_STREAM)
-    # TODO: udp_server_socket = socket(AF_INET, SOCK_DGRAM)
 
     try:
         tcp_server_socket.bind(('', listening_port))
-        # TODO: udp_server_socket.bind(('', listening_port))
     except PermissionError:
         print("PermissionError: You must use \"sudo\" to launch your server on the default port 37")
         exit(1)
 
     tcp_server_socket.listen(BACKLOG)
-    # TODO: udp_server_socket.listen(BACKLOG)
 
     while True:
         connection_socket, client_addr = tcp_server_socket.accept()
@@ -170,12 +165,9 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 print("Attending request...")
                 connection_socket.send(message)
                 sleep(1)
-                # connection_socket.close()
+                # TODO: do we have to close or not?
+                # connection_socket.close() # According to the RFC the server should send the data and close
                 os._exit(0)
-                
-                # we have to check for a conn in TCP
-                
-                # we have to check to recieve empty UDP messages
             else:
                 # parent process
                 connection_socket.close()
