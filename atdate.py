@@ -84,12 +84,12 @@ def get_current_time(target, mode, port, debug_trigger):
             while True:
                 if debug_trigger == 1:
                     print("TCP handshake successful with TIME server!")
-                    
+                
                 try:
                     time_recieve(client_socket, debug_trigger)
                 except KeyboardInterrupt:
                     client_socket.close()
-                    print("\nSIGINT received, closing client-side TCP connection")
+                    print("\nSIGINT received, closing program")
                     exit(1)
         except gaierror:
             print("Error")
