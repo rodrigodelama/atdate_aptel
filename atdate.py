@@ -1,19 +1,25 @@
 # !/usr/bin/python3
 # atdate.py
 
+## IMPORTS
+
 import sys # For commandline args
-import os
+import os # To create processes
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
 from time import gmtime, sleep, time # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
 import time
+
+## CONSTANTS -------------------------------------
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
 BUFSIZE = 4
+
+# Time Delta Constant
 time_delta = 2208988800 #- 3600*2 # GMT - 2 hours for CET (We think that )
 # We used to substract 2 hours, to get CEST (+2 hours) why not anymore??
 
-# Constants for sepparating the different mode
+# Mode Constants
 HOSTNAME = "-s"
 MODE = "-m"
 UDP = "cu"
@@ -28,14 +34,15 @@ SERV_BUFSIZE = 1024
 BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
                 # the backlog parameter specifies the number
                 # of pending connections the queue will hold.
+## END CONSTANTS ---------------------------------
 
 def get_current_time(target, mode, port, debug_trigger):
 
     if debug_trigger == 1:
         print("Attempting to connect to:", target)
-    # Get address info in a "2D" tuple
-    # Index[0] (first) is the IP address of the desired hostname
-    # Index[-1] (last) is the definition of the Port No. where we will open our socket
+        # Get address info in a "2D" tuple
+        # Index[0] (first) is the IP address of the desired hostname
+        # Index[-1] (last) is the definition of the Port No. where we will open our socket
     server = getaddrinfo(target, port)[0][-1] # 2D 
 
     # Test print input address data:
@@ -46,32 +53,38 @@ def get_current_time(target, mode, port, debug_trigger):
     if (mode == UDP):
         if debug_trigger == 1:
             print("Attempting to open UDP socket...")
+
         # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
         client_socket = socket(AF_INET, SOCK_DGRAM)
-        # Only in UDP do we send the empty message to "server" (tuple with (addr,port))
+        # In UDP we send an empty message to "server" (server is a tuple (addr, port))
         client_socket.sendto(bytes(0), server)
+
         if debug_trigger == 1:
             print("Sent empty UDP message (0bytes)")
+
         time_recieve(client_socket, debug_trigger)
-        client_socket.close()
         if debug_trigger == 1:
-            print("Succesful retreival: socket now closed")
+            print("Succesful retreival: Closing socket")
+        client_socket.close()
         exit(0) # End program after succesful TIME request
+    
     elif (mode == TCP):
         # Loop until SIGNINT
         while True:
             try:
                 if debug_trigger == 1:
                     print("Attempting to open TCP socket")
-                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
 
+                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+                client_socket = socket(AF_INET, SOCK_STREAM)
                 # We must declare a new socket for each connection because the server closes
                 # the socket with us after each request as per the RFC, so we must make a new one
-                client_socket = socket(AF_INET, SOCK_STREAM)
                 
                 client_socket.connect(server) # Only in TCP do we handshake with the server
+                
                 if debug_trigger == 1:
                     print("TCP handshake successful with TIME server!")
+                
                 try:
                     time_recieve(client_socket, debug_trigger)
                     sleep(1)
@@ -88,23 +101,27 @@ def get_current_time(target, mode, port, debug_trigger):
 
 def time_recieve(client_socket, debug_trigger):
     # Revieve the 4byte (32bit) current time data
-    # If UDP only ONCE else TCP constantly until SIGNINT
     recv_data = client_socket.recv(BUFSIZE)
     
     if debug_trigger == 1:
         print("RAW recieved data:", recv_data) # WHAT ENCODING IS THIS ??
 
     time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
-    if debug_trigger == 1:
-        print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
     '''
     ! tranforms our data from the network order (BE) to x64 (LE)
     I means unsigned integer (4bytes: the buffer size we need)
     (the combination of both "!I" is equivalent to ntohs in C)
     '''
-    time_since_1970 -= time_delta # we subtract when receiving
-    # Carlos usa: time.ctime
+    
+    if debug_trigger == 1:
+        print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
+    
+    # We subtract the 70year time delta when receiving (adjusting for UNIX)
+    time_since_1970 -= time_delta
+    
+    # Use time.ctime - Carlos' tip
     print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
+    
     if debug_trigger == 1:
         print("Success!")
 
@@ -112,38 +129,43 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     if(debug_trigger == 1):
         print("TIME server running on port", listening_port)
 
-    # From TCPServer_conc.py
-    server_socket = socket(AF_INET, SOCK_STREAM)
+    # Inspired on TCPServer_conc.py
+
+    # Create both socket types
+    tcp_server_socket = socket(AF_INET, SOCK_STREAM)
+    # TODO: udp_server_socket = socket(AF_INET, SOCK_DGRAM)
+
     try:
-        server_socket.bind(('', listening_port))
+        tcp_server_socket.bind(('', listening_port))
+        # TODO: udp_server_socket.bind(('', listening_port))
     except PermissionError:
         print("PermissionError: You must use \"sudo\" to launch your server on the default port 37")
         exit(1)
-    server_socket.listen(BACKLOG)
+
+    tcp_server_socket.listen(BACKLOG)
+    # TODO: udp_server_socket.listen(BACKLOG)
+
     while True:
-        connection_socket, client_addr = server_socket.accept()
+        connection_socket, client_addr = tcp_server_socket.accept()
         try:
             if os.fork() == 0:
                 # child process
-                server_socket.close()
+                tcp_server_socket.close()
 
                 mytime = int(time.time())
                 if debug_trigger == 1:
-                    print(type(mytime))
-                    print(mytime)
+                    print("Local time:", mytime)
                 mytime += time_delta # we add when sending
                 if debug_trigger == 1:
-                    print("time plus time delta:", mytime)
-                #maybe, time.ctime(secs) just does all the formatting for us.
-                #instead of using "datetime", we will be using the "time" library, in which the function ctime() exists.
-                message = struct.pack("!I", mytime) # Potentally will have to send in big endian. (yes)
-                                                    # also try ! might work since its a network script
+                    print("Time plus time delta:", mytime)
+
+                message = struct.pack("!I", mytime)
+                # Sent in big endian with !, which changes to and from network order
+
                 print("Attending request...")
                 connection_socket.send(message)
                 connection_socket.close()
                 os._exit(0)
-                #NOTE: if we kill a socket with any port number, this port number will remain bloqued for some time (almost 2 mins), ther´s nothing we can do about it.
-                # message = connection_socket.recv(SERV_BUFSIZE) # Big buffer so we may concurrently serve many clients
                 
                 # we have to check for a conn in TCP
                 
@@ -155,7 +177,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
             connection_socket.close()
             print("\nSIGINT received, closing server")
             break
-    server_socket.close()
+    tcp_server_socket.close()
 
 def main():
     # client or server functionality menu should be here
