@@ -70,31 +70,31 @@ def get_current_time(target, mode, port, debug_trigger):
     
     elif (mode == TCP):
         # Loop until SIGNINT
-        while True:
-            try:
-                if debug_trigger == 1:
-                    print("Attempting to open TCP socket")
+        try:
+            if debug_trigger == 1:
+                print("Attempting to open TCP socket")
 
-                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
-                client_socket = socket(AF_INET, SOCK_STREAM)
-                # We must declare a new socket for each connection because the server closes
-                # the socket with us after each request as per the RFC, so we must make a new one
+            # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+            client_socket = socket(AF_INET, SOCK_STREAM)
+            # We must declare a new socket for each connection because the server closes
+            # the socket with us after each request as per the RFC, so we must make a new one
+
+            client_socket.connect(server) # Only in TCP do we handshake with the server
+
+            if debug_trigger == 1:
+                print("TCP handshake successful with TIME server!")
                 
-                client_socket.connect(server) # Only in TCP do we handshake with the server
-                
-                if debug_trigger == 1:
-                    print("TCP handshake successful with TIME server!")
-                
-                try:
+            try:
+                while True:
                     time_recieve(client_socket, debug_trigger)
                     sleep(1)
-                except KeyboardInterrupt:
-                    client_socket.close()
-                    print("\nSIGINT received, closing TCP connection")
-                    exit(1)
-            except gaierror:
-                print("Error")
+            except KeyboardInterrupt:
+                client_socket.close()
+                print("\nSIGINT received, closing client-side TCP connection")
                 exit(1)
+        except gaierror:
+            print("Error")
+            exit(1)
 
     # TODO: see packet argparse
     # argparse.ArgumentParser
@@ -102,28 +102,33 @@ def get_current_time(target, mode, port, debug_trigger):
 def time_recieve(client_socket, debug_trigger):
     # Revieve the 4byte (32bit) current time data
     recv_data = client_socket.recv(BUFSIZE)
+
     
     if debug_trigger == 1:
         print("RAW recieved data:", recv_data) # WHAT ENCODING IS THIS ??
+        print("Data size:", sys.getsizeof(recv_data))
 
-    time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
-    '''
-    ! tranforms our data from the network order (BE) to x64 (LE)
-    I means unsigned integer (4bytes: the buffer size we need)
-    (the combination of both "!I" is equivalent to ntohs in C)
-    '''
-    
-    if debug_trigger == 1:
-        print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
-    
-    # We subtract the 70year time delta when receiving (adjusting for UNIX)
-    time_since_1970 -= time_delta
-    
-    # Use time.ctime - Carlos' tip
-    print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
-    
-    if debug_trigger == 1:
-        print("Success!")
+    if sys.getsizeof(recv_data) == 37:
+        time_since_1970 = struct.unpack("!I", recv_data)[0] # https://docs.python.org/3/library/struct.html
+        '''
+        ! tranforms our data from the network order (BE) to x64 (LE)
+        I means unsigned integer (4bytes: the buffer size we need)
+        (the combination of both "!I" is equivalent to ntohs in C)
+        '''
+
+        if debug_trigger == 1:
+            print("time_since_1970 struct (tuple pos[0]):", time_since_1970)
+
+        # We subtract the 70year time delta when receiving (adjusting for UNIX)
+        time_since_1970 -= time_delta
+
+        # Use time.ctime - Carlos' tip
+        print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
+        
+        if debug_trigger == 1:
+            print("Success!")
+    else:
+        print("Server closed connection, requesting time again...")
 
 def time_server(listening_port, debug_trigger): # The server is concurrent
 
