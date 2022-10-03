@@ -163,11 +163,10 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # Sent in big endian with !, which changes to and from network order
 
                 print("Attending request...")
-                connection_socket.send(message)
-                sleep(1)
-                # TODO: do we have to close or not?
-                # connection_socket.close() # According to the RFC the server should send the data and close
-                os._exit(0)
+                while True:
+                    connection_socket.send(message)
+                    sleep(1)
+                    os._exit(0)
             else:
                 # parent process
                 connection_socket.close()
