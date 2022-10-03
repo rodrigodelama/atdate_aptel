@@ -74,12 +74,12 @@ def get_current_time(target, mode, port, debug_trigger):
             if debug_trigger == 1:
                 print("Attempting to open TCP socket")
 
-            # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
-            client_socket = socket(AF_INET, SOCK_STREAM)
-            # We must declare a new socket for each connection because the server closes
-            # the socket with us after each request as per the RFC, so we must make a new one
-
             while True:
+                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+                client_socket = socket(AF_INET, SOCK_STREAM)
+                # We must declare a new socket for each connection because the server closes
+                # the socket with us after each request as per the RFC, so we must make a new one
+
                 client_socket.connect(server) # Only in TCP do we handshake with the server
 
                 if debug_trigger == 1:
@@ -103,7 +103,6 @@ def time_recieve(client_socket, debug_trigger):
     # Revieve the 4byte (32bit) current time data
     recv_data = client_socket.recv(BUFSIZE)
 
-    
     if debug_trigger == 1:
         print("RAW recieved data:", recv_data) # WHAT ENCODING IS THIS ??
         print("Data size:", sys.getsizeof(recv_data))
@@ -129,6 +128,8 @@ def time_recieve(client_socket, debug_trigger):
             print("Success!")
     else:
         print("Server closed connection, requesting time again...")
+        client_socket.close()
+
 
 def time_server(listening_port, debug_trigger): # The server is concurrent
 
