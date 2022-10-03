@@ -74,14 +74,14 @@ def get_current_time(target, mode, port, debug_trigger):
             if debug_trigger == 1:
                 print("Attempting to open TCP socket")
 
+            # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+            client_socket = socket(AF_INET, SOCK_STREAM)
+            # We must declare a new socket for each connection because the server closes
+            # the socket with us after each request as per the RFC, so we must make a new one
+
+            client_socket.connect(server) # Only in TCP do we handshake with the server
+
             while True:
-                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
-                client_socket = socket(AF_INET, SOCK_STREAM)
-                # We must declare a new socket for each connection because the server closes
-                # the socket with us after each request as per the RFC, so we must make a new one
-
-                client_socket.connect(server) # Only in TCP do we handshake with the server
-
                 if debug_trigger == 1:
                     print("TCP handshake successful with TIME server!")
                     
