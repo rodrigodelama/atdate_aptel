@@ -170,7 +170,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                 print("Attending request...")
                 connection_socket.send(message)
-                connection_socket.close()
+                # connection_socket.close()
                 os._exit(0)
                 
                 # we have to check for a conn in TCP
