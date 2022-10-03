@@ -125,7 +125,9 @@ def time_recieve(client_socket, debug_trigger):
         
         if debug_trigger == 1:
             print("Success!")
-    except struct.error: # detects when the struct is 0 bytes
+    except struct.error: 
+        # detects when the struct is 0 bytes, which means server has ended connection.
+        # used for both cases of connection (UDP,TCP).
         print("Server closed the connection, closing socket...")
         client_socket.close()
 
@@ -206,17 +208,19 @@ def main():
     # Filter input args or instruct usage
     
     if len(sys.argv) == 1: # no input args
-        usage()
+        usage_info()
         exit(1)
 
     if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
-        usage()
+        usage_info()
         exit(1)
 
     ## The following are the various conditions to interpret our input with flags
     # We will filter argv positions for -m -s -p and -d
     
     # Debugger Activation
+    #NOTE: for every parameter and flags check, it's necessary to catch 
+    # the exception that raises the .index() function when the string is not inside our argv array.
     try:
         if (sys.argv.index(DEBUG)): # DEBUG means -d
             debug_trigger = 1
@@ -247,18 +251,6 @@ def main():
     except ValueError:
         mode = UDP # Default: UDP client
 
-    '''
-    # NEW PARAMETER EXAMPLE
-    new_param_x = ""
-    try:
-        if (sys.argv.index("-x")):
-            mode = sys.argv[sys.argv.index(MODE)+1]
-            if debug_trigger == 1:
-                print("The new parameter is:", new_param_x)
-    except ValueError:
-        mode = UDP # Default: UDP client
-    '''
-
     # Port selection for server and default behaviour programmed
     try:
         if (sys.argv.index(PORT)): # PORT means -p
@@ -278,7 +270,7 @@ def main():
         print("Error: Invalid operation mode")
         exit(1)
 
-def usage():
+def usage_info():
     print("Usage: %s -s <Hostname/IP Address> -m <Mode> <Port> -d <Debug>" % (sys.argv[0]))
     print("Hostname/IP Address: input your desired TIME server")
     print("Mode: cu Makes the TIME request via UDP")
@@ -295,3 +287,16 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
             exit(1)
+
+
+    '''
+    # NEW PARAMETER EXAMPLE
+    new_param_x = ""
+    try:
+        if (sys.argv.index("-x")):
+            mode = sys.argv[sys.argv.index(MODE)+1]
+            if debug_trigger == 1:
+                print("The new parameter is:", new_param_x)
+    except ValueError:
+        mode = UDP # Default: UDP client
+    '''
