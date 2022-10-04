@@ -6,7 +6,7 @@
 import sys # For commandline args
 import os # To create processes
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
-from time import gmtime, sleep, time # The time.pyi library has this funtion to format secconds
+from time import sleep, time # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
 import time
 
