@@ -135,8 +135,7 @@ def time_recieve(client_socket, debug_trigger):
         # We subtract the 70year time delta when receiving (adjusting for UNIX)
         time_since_1970 -= time_delta
 
-        # Use time.ctime - Carlos' tip
-        print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
+        print("time diff w server:", time_since_1970)
         
         if debug_trigger == 1:
             print("Success!")
