@@ -169,7 +169,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                         client_time -= time_delta
                         mytime -= client_time
                     except struct.error:
-                        print("Server closed the connection, closing socket...")
+                        print("Error receiving...")
                         connection_socket.close()
 
                     if debug_trigger == 1:
