@@ -92,8 +92,10 @@ def get_current_time(target, mode, port, debug_trigger):
                     tcp_client_time += time_delta # we add the 70 year difference when sending
                     message = struct.pack("!I", tcp_client_time)
                     client_socket.send(message)#We send our time to the server we connected to.
-
-                    time_recieve(client_socket, debug_trigger)#This will receive the time difference (already made by server), just have to substract time since 1970 (maybe).
+                    try:
+                        time_recieve(client_socket, debug_trigger)
+                    except struct.error:
+                        print("Invalid time delta, 0 bytes recieved")
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -159,12 +161,13 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
             if os.fork() == 0:
                 # child process
                 tcp_server_socket.close()
-
                 while True:
                     try:
                         # grab the current system time
                         server_rcv_data = connection_socket.recv(BUFSIZE)
                         client_time = struct.unpack("!I", server_rcv_data)[0]
+                        if debug_trigger == 1:
+                            print("Client time:", client_time)
                         mytime = int(time.time())
                         client_time -= time_delta
                         mytime -= client_time
