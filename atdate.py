@@ -10,7 +10,8 @@ from time import gmtime, sleep, time # The time.pyi library has this funtion to 
 import struct # To isolate our desired info from the packet with unpack()
 import time
 
-## CONSTANTS -------------------------------------
+## CONSTANTS -------------------------------------------------------------------
+
 # Define a buffer size for the 32 bit BIN number we will recieve
 # 4 bytes * 8 bits/byte = 32 bits
 BUFSIZE = 4
@@ -34,16 +35,18 @@ SERV_BUFSIZE = 1024
 BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
                 # the backlog parameter specifies the number
                 # of pending connections the queue will hold.
-## END CONSTANTS ---------------------------------
+
+## END CONSTANTS ---------------------------------------------------------------
 
 def get_current_time(target, mode, port, debug_trigger):
 
     if debug_trigger == 1:
         print("Attempting to connect to:", target)
-        # Get address info in a "2D" tuple
-        # Index[0] (first) is the IP address of the desired hostname
-        # Index[-1] (last) is the definition of the Port No. where we will open our socket
+
+    # Get address info in a "2D" tuple
     server = getaddrinfo(target, port)[0][-1] # 2D 
+    # Index[0] (first) is the IP address of the desired hostname
+    # Index[-1] (last) is the definition of the Port No. where we will open our socket
 
     # Test print input address data:
     if debug_trigger == 1:
@@ -56,20 +59,20 @@ def get_current_time(target, mode, port, debug_trigger):
 
         # We will create the socket w/ SOCK_DGRAM - UDP sends datagrams
         client_socket = socket(AF_INET, SOCK_DGRAM)
+
         # In UDP we send an empty message to "server" (server is a tuple (addr, port))
         client_socket.sendto(bytes(0), server)
-
         if debug_trigger == 1:
             print("Sent empty UDP message (0bytes)")
 
+        # Time recieve definition called
         time_recieve(client_socket, debug_trigger)
         if debug_trigger == 1:
             print("Succesful retreival: Closing socket")
         client_socket.close()
         exit(0) # End program after succesful TIME request
-    
+
     elif (mode == TCP):
-        # Loop until SIGNINT
         try:
             if debug_trigger == 1:
                 print("Attempting to open TCP socket")
@@ -83,7 +86,8 @@ def get_current_time(target, mode, port, debug_trigger):
 
             if debug_trigger == 1:
                 print("TCP handshake successful with TIME server!")
-            
+
+            # Loop until SIGNINT
             while True:
                 try:
                     time_recieve(client_socket, debug_trigger)
@@ -94,9 +98,6 @@ def get_current_time(target, mode, port, debug_trigger):
         except gaierror:
             print("Error")
             exit(1)
-
-    # TODO: see packet argparse
-    # argparse.ArgumentParser
 
 def time_recieve(client_socket, debug_trigger):
     # Revieve the 4byte (32bit) current time data
@@ -155,15 +156,17 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 tcp_server_socket.close()
 
                 while True:
+                    # grab the current system time
                     mytime = int(time.time())
                     if debug_trigger == 1:
                         print("Local time:", mytime)
-                    mytime += time_delta # we add when sending
+                    mytime += time_delta # we add the 70 year difference when sending
                     if debug_trigger == 1:
                         print("Time plus time delta:", mytime)
 
                     message = struct.pack("!I", mytime)
-                    # Sent in big endian with !, which changes to and from network order
+                    # Transformed to BE with ! to send over the network
+                    # The ! flips bytes to and from network order
 
                     print("Attending request...")
                     connection_socket.send(message)
@@ -178,46 +181,39 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     tcp_server_socket.close()
 
 def main():
-    # client or server functionality menu should be here
-    # also filter parameters here
-
-    # program shall launch like this:
     '''
     atdate [-s serverhost] [-p port] [-m cu | ct | s ] [-d]
 
     -m: operating mode
-    cu: el programa arranca en modo consulta funcionando como cliente UDP.
-    ct: el programa arranca en modo consulta funcionando como cliente TCP.
-    s: el programa arranca en modo servidor.
-    Si no se especifica la opción -m, el programa arranca en modo consulta UDP,
+        cu: el programa arranca en modo consulta funcionando como cliente UDP.
+        ct: el programa arranca en modo consulta funcionando como cliente TCP.
+        s: el programa arranca en modo servidor.
+        Si no se especifica la opción -m, el programa arranca en modo consulta UDP,
         es decir: -m cu.
 
     -s: serverhost
-    hostname || IP
+        hostname || IP
 
     -p: port selection
-    if port is specified 
-    elif no port is specified use 37
+        if port is specified 
+        elif no port is specified use 37
 
-    -d: modo depuración. Mostrará trazas adicionales para la depuración del
-    programa.
-    
+    -d: modo depuración. Mostrará trazas adicionales para la depuración del programa.
+
     Si alguno de los parámetros opcionales necesarios para la ejecución no se
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
-    # Filter input args or instruct usage
+    ### Filtering input args ---------------------------------------------------
     
+    ## Filtering by legnth
     if len(sys.argv) == 1: # no input args
         usage_info()
         exit(1)
-
     if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
         usage_info()
         exit(1)
 
-    ## The following are the various conditions to interpret our input with flags
-    # We will filter argv positions for -m -s -p and -d
-    
+    ## Filtering flags -m -s -p and -d
     # Debugger Activation
     #NOTE: for every parameter and flags check, it's necessary to catch 
     # the exception that raises the .index() function when the string is not inside our argv array.
@@ -227,7 +223,7 @@ def main():
     except ValueError:
         debug_trigger = 0
 
-    # Hostname validity check, and assignment to target
+    # Hostname validity check and assignment to target
     try:
         if (sys.argv.index(HOSTNAME)): # HOSTNAME means -s
 
@@ -236,7 +232,7 @@ def main():
                 print("Target (hostname) has been identified as:", sys.argv[sys.argv.index(HOSTNAME)+1])
 
             target = sys.argv[sys.argv.index(HOSTNAME)+1]
-    except ValueError: # If a hostname is not entered -> must be in server "s" mode.
+    except ValueError: # If a hostname is not entered program should be in server "s" mode.
         if (sys.argv[sys.argv.index(MODE)+1] != TIME_SERVER): # MODE means -m
             print("Error: You must select SERVER mode (-m s) if you do not input a hostname")
             print("Additionally you may add a custom port number, otherwise it will run at the default port 37")
@@ -249,7 +245,16 @@ def main():
             if debug_trigger == 1:
                 print("Mode has been identified as:", mode)
     except ValueError:
-        mode = UDP # Default: UDP client
+        mode = UDP # Default mode is UDP client
+        if debug_trigger == 1:
+                print("Mode wasn't specified, running default settings")
+
+    # Port selection for server and default behaviour programmed
+    try:
+        if (sys.argv.index(PORT)): # PORT means -p
+            port = int(sys.argv[sys.argv.index(PORT)+1])
+    except ValueError:
+            port = DEFAULT_PORT # Default: Port 37
 
     # Port selection for server and default behaviour programmed
     try:
@@ -287,7 +292,6 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
             exit(1)
-
 
     '''
     # NEW PARAMETER EXAMPLE
