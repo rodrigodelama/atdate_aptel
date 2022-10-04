@@ -204,6 +204,8 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     ### Filtering input args ---------------------------------------------------
+    # NOTE: for every parameter and flags check, it's necessary to catch the exception that
+    #       raises the .index() function when the string is not inside our argv array.
     
     ## Filtering by legnth
     if len(sys.argv) == 1: # no input args
@@ -215,8 +217,6 @@ def main():
 
     ## Filtering flags -m -s -p and -d
     # Debugger Activation
-    #NOTE: for every parameter and flags check, it's necessary to catch 
-    # the exception that raises the .index() function when the string is not inside our argv array.
     try:
         if (sys.argv.index(DEBUG)): # DEBUG means -d
             debug_trigger = 1
