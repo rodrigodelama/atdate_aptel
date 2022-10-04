@@ -77,20 +77,22 @@ def get_current_time(target, mode, port, debug_trigger):
             if debug_trigger == 1:
                 print("Attempting to open TCP socket")
 
-            # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
-            client_socket = socket(AF_INET, SOCK_STREAM)
-            # We must declare a new socket for each connection because the server closes
-            # the socket with us after each request as per the RFC, so we must make a new one
-
-            client_socket.connect(server) # Only in TCP do we handshake with the server
-
-            if debug_trigger == 1:
-                print("TCP handshake successful with TIME server!")
-
             # Loop until SIGNINT
             while True:
+                # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
+                client_socket = socket(AF_INET, SOCK_STREAM)
+                # We must declare a new socket for each connection because the server closes
+                # the socket with us after each request as per the RFC, so we must make a new one
+
+                client_socket.connect(server) # Only in TCP do we handshake with the server
+
+                if debug_trigger == 1:
+                    print("TCP handshake successful with TIME server!")
+
                 try:
                     time_recieve(client_socket, debug_trigger)
+                    sleep(1)
+                    client_socket.close()
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -155,22 +157,22 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # child process
                 tcp_server_socket.close()
 
-                while True:
-                    # grab the current system time
-                    mytime = int(time.time())
-                    if debug_trigger == 1:
-                        print("Local time:", mytime)
-                    mytime += time_delta # we add the 70 year difference when sending
-                    if debug_trigger == 1:
-                        print("Time plus time delta:", mytime)
+                # grab the current system time
+                mytime = int(time.time())
+                if debug_trigger == 1:
+                    print("Local time:", mytime)
+                mytime += time_delta # we add the 70 year difference when sending
+                if debug_trigger == 1:
+                    print("Time plus time delta:", mytime)
 
-                    message = struct.pack("!I", mytime)
-                    # Transformed to BE with ! to send over the network
-                    # The ! flips bytes to and from network order
+                message = struct.pack("!I", mytime)
+                # Transformed to BE with ! to send over the network
+                # The ! flips bytes to and from network order
 
-                    print("Attending request...")
-                    connection_socket.send(message)
-                    sleep(1)
+                print("Attending request...")
+                connection_socket.send(message)
+                connection_socket.close()
+                sleep(1)
             else:
                 # parent process
                 connection_socket.close()
@@ -204,6 +206,8 @@ def main():
     proporciona por línea de comandos, se tomarán los valores por defecto. (-m cu -p 37)
     '''
     ### Filtering input args ---------------------------------------------------
+    # NOTE: for every parameter and flags check, it's necessary to catch the exception
+    #       that raises the .index() function when the string is not inside our argv array
     
     ## Filtering by legnth
     if len(sys.argv) == 1: # no input args
@@ -215,8 +219,6 @@ def main():
 
     ## Filtering flags -m -s -p and -d
     # Debugger Activation
-    #NOTE: for every parameter and flags check, it's necessary to catch 
-    # the exception that raises the .index() function when the string is not inside our argv array.
     try:
         if (sys.argv.index(DEBUG)): # DEBUG means -d
             debug_trigger = 1
@@ -292,15 +294,3 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\nSIGINT received, closing program")
             exit(1)
-
-    '''
-    # NEW PARAMETER EXAMPLE
-    new_param_x = ""
-    try:
-        if (sys.argv.index("-x")):
-            mode = sys.argv[sys.argv.index(MODE)+1]
-            if debug_trigger == 1:
-                print("The new parameter is:", new_param_x)
-    except ValueError:
-        mode = UDP # Default: UDP client
-    '''
