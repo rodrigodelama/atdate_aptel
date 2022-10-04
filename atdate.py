@@ -161,12 +161,16 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 tcp_server_socket.close()
 
                 while True:
-                    # grab the current system time
-                    server_rcv_data = connection_socket.recv(BUFSIZE)
-                    client_time = struct.unpack("!I", server_rcv_data)[0]
-                    mytime = int(time.time())
-                    mytime -= client_time
-                    
+                    try:
+                        # grab the current system time
+                        server_rcv_data = connection_socket.recv(BUFSIZE)
+                        client_time = struct.unpack("!I", server_rcv_data)[0]
+                        mytime = int(time.time())
+                        mytime -= client_time
+                    except struct.error:
+                        print("Server closed the connection, closing socket...")
+                        connection_socket.close()
+
                     if debug_trigger == 1:
                         print("Local time difference with client:", mytime)
                     
