@@ -92,7 +92,7 @@ def get_current_time(target, mode, port, debug_trigger):
                 if debug_trigger == 1:
                     print("Local time:", my_client_time)
                 
-                #my_client_time += time_delta # adjusting to 1900
+                my_client_time += time_delta # adjusting to 1900
 
                 client_message = struct.pack("!I", my_client_time)
                 # Transformed to BE with ! to send over the network
@@ -176,7 +176,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                     my_time = int(time.time())
                     if debug_trigger == 1:
                         print("Local time:", my_time)
-                    #my_time -= time_delta # time since 1900s
+                    my_time -= time_delta # time since 1900s
+                    
                     time_diff = my_time - client_time
 
                     if debug_trigger == 1:
