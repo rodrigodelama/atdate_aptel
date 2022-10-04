@@ -6,7 +6,7 @@
 import sys # For commandline args
 import os # To create processes
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
-from time import gmtime, sleep, time # The time.pyi library has this funtion to format secconds
+from time import sleep, time # The time.pyi library has this funtion to format secconds
 import struct # To isolate our desired info from the packet with unpack()
 import time
 
@@ -88,7 +88,12 @@ def get_current_time(target, mode, port, debug_trigger):
             # Loop until SIGNINT
             while True:
                 try:
-                    time_recieve(client_socket, debug_trigger)
+                    tcp_client_time = int(time.time())
+                    tcp_client_time += time_delta # we add the 70 year difference when sending
+                    message = struct.pack("!I", tcp_client_time)
+                    client_socket.send(message)#We send our time to the server we connected to.
+
+                    time_recieve(client_socket, debug_trigger)#This will receive the time difference (already made by server), just have to substract time since 1970 (maybe).
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -99,6 +104,7 @@ def get_current_time(target, mode, port, debug_trigger):
 
 def time_recieve(client_socket, debug_trigger):
     # Revieve the 4byte (32bit) current time data
+    # In this case, we will receive the substraction of the server time with the client's time (no need for time.ctime())
     recv_data = client_socket.recv(BUFSIZE)
 
     if debug_trigger == 1:
@@ -120,7 +126,8 @@ def time_recieve(client_socket, debug_trigger):
         time_since_1970 -= time_delta
 
         # Use time.ctime - Carlos' tip
-        print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
+        #print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
+        print("Substraction = " + str(time_since_1970))
         
         if debug_trigger == 1:
             print("Success!")
@@ -155,10 +162,16 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                 while True:
                     # grab the current system time
+                    server_rcv_data = connection_socket.recv(BUFSIZE)
+                    client_time = struct.unpack("!I", server_rcv_data)[0]
                     mytime = int(time.time())
+                    mytime -= client_time
+                    
                     if debug_trigger == 1:
-                        print("Local time:", mytime)
+                        print("Local time difference with client:", mytime)
+                    
                     mytime += time_delta # we add the 70 year difference when sending
+                    
                     if debug_trigger == 1:
                         print("Time plus time delta:", mytime)
 
