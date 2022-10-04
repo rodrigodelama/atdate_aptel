@@ -180,7 +180,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                     if debug_trigger == 1:
                         print("Time plus time delta:", mytime)
 
-                    message = struct.pack("!I", mytime)
+                    message = struct.pack("!i", mytime)
                     # Transformed to BE with ! to send over the network
                     # The ! flips bytes to and from network order
 
