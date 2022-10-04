@@ -94,6 +94,7 @@ def get_current_time(target, mode, port, debug_trigger):
                 
                 my_client_time += time_delta # adjusting to 1900
 
+
                 client_message = struct.pack("!I", my_client_time)
                 # Transformed to BE with ! to send over the network
                 # The ! flips bytes to and from network order
@@ -172,14 +173,15 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                     packet = connection_socket.recv(BUFSIZE)
                     try:
                         client_time = struct.unpack("!I", packet)[0]
-                        
+                        if debug_trigger == 1:
+                            print("Client time:", client_time)
                         # grab the current system time
                         my_time = int(time.time())
                         if debug_trigger == 1:
                             print("Local time:", my_time)
                         my_time += time_delta # time since 1900s
-                        
-                        time_diff = my_time - client_time
+                        print("Local time plus delta:", my_time)
+                        time_diff = client_time - my_time
 
                         if debug_trigger == 1:
                             print("Time delta:", time_diff)
@@ -188,7 +190,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                         exit(1)
 
                     try:
-                        message = struct.pack("!I", time_diff)
+                        message = struct.pack("!i", time_diff)
                         # Transformed to BE with ! to send over the network
                         # The ! flips bytes to and from network order
                         print("Sending diff...")
