@@ -79,10 +79,8 @@ def get_current_time(target, mode, port, debug_trigger):
 
             # We will create a socket w/ SOCK_STREAM - TCP sends streams of bytes
             client_socket = socket(AF_INET, SOCK_STREAM)
-            # We must declare a new socket for each connection because the server closes
-            # the socket with us after each request as per the RFC, so we must make a new one
 
-            client_socket.connect(server) # Only in TCP do we handshake with the server
+            client_socket.connect(server) # In TCP we must handshake with the server
 
             if debug_trigger == 1:
                 print("TCP handshake successful with TIME server!")
@@ -127,8 +125,8 @@ def time_recieve(client_socket, debug_trigger):
         if debug_trigger == 1:
             print("Success!")
     except struct.error: 
-        # detects when the struct is 0 bytes, which means server has ended connection.
-        # used for both cases of connection (UDP,TCP).
+        # detects when the struct is 0 bytes, which means server has ended the connection with our client
+        # used for both cases of connection (UDP, TCP)
         print("Server closed the connection, closing socket...")
         client_socket.close()
 
