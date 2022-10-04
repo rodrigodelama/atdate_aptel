@@ -87,8 +87,21 @@ def get_current_time(target, mode, port, debug_trigger):
 
             # Loop until SIGNINT
             while True:
+                # grab the current system time
+                my_client_time = int(time.time())
+                if debug_trigger == 1:
+                    print("Local time:", my_client_time)
+                
+                client_message = struct.pack("!I", my_client_time)
+                # Transformed to BE with ! to send over the network
+                # The ! flips bytes to and from network order
                 try:
-                    time_recieve(client_socket, debug_trigger)
+                    print("Sending my time...")
+                    client_socket.send(client_message)
+                    try:
+                        time_recieve(client_socket, debug_trigger)
+                    except struct.error:
+                        print("Invalid time delta, 0 bytes recieved")
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -155,20 +168,25 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                 while True:
                     # grab the current system time
-                    mytime = int(time.time())
+                    my_time = int(time.time())
                     if debug_trigger == 1:
-                        print("Local time:", mytime)
-                    mytime += time_delta # we add the 70 year difference when sending
+                        print("Local time:", my_time)
+
+                    packet = connection_socket.recv(BUFSIZE)
+                    client_time = struct.unpack("!I", packet)[0]
+                    time_diff = my_time - client_time
                     if debug_trigger == 1:
-                        print("Time plus time delta:", mytime)
-
-                    message = struct.pack("!I", mytime)
-                    # Transformed to BE with ! to send over the network
-                    # The ! flips bytes to and from network order
-
-                    print("Attending request...")
-                    connection_socket.send(message)
-                    sleep(1)
+                        print("Time delta:", time_diff)
+                    try:
+                        message = struct.pack("!I", time_diff)
+                        # Transformed to BE with ! to send over the network
+                        # The ! flips bytes to and from network order
+                        print("Sending diff...")
+                        connection_socket.send(message)
+                        sleep(1)
+                    except struct.error:
+                        print("Error sending...")
+                        exit(1)
             else:
                 # parent process
                 connection_socket.close()
