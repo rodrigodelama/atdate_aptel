@@ -166,6 +166,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                         server_rcv_data = connection_socket.recv(BUFSIZE)
                         client_time = struct.unpack("!I", server_rcv_data)[0]
                         mytime = int(time.time())
+                        client_time -= time_delta
                         mytime -= client_time
                     except struct.error:
                         print("Server closed the connection, closing socket...")
