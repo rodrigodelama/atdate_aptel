@@ -170,18 +170,22 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                 while True:
                     packet = connection_socket.recv(BUFSIZE)
-                    client_time = struct.unpack("!I", packet)[0]
-                    
-                    # grab the current system time
-                    my_time = int(time.time())
-                    if debug_trigger == 1:
-                        print("Local time:", my_time)
-                    my_time -= time_delta # time since 1900s
-                    
-                    time_diff = my_time - client_time
+                    try:
+                        client_time = struct.unpack("!I", packet)[0]
+                        
+                        # grab the current system time
+                        my_time = int(time.time())
+                        if debug_trigger == 1:
+                            print("Local time:", my_time)
+                        my_time += time_delta # time since 1900s
+                        
+                        time_diff = my_time - client_time
 
-                    if debug_trigger == 1:
-                        print("Time delta:", time_diff)
+                        if debug_trigger == 1:
+                            print("Time delta:", time_diff)
+                    except struct.error:
+                        print("Error recieving...")
+                        exit(1)
 
                     try:
                         message = struct.pack("!I", time_diff)
