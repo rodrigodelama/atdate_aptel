@@ -3,6 +3,7 @@
 
 ## IMPORTS
 
+from pickle import TRUE
 import sys # For commandline args
 import os # To create processes
 from socket import socket, getaddrinfo, AF_INET, SOCK_DGRAM, SOCK_STREAM, gaierror #SOCK_STREAM is TCP, AF_INET is Addr. Fam. IPv4
@@ -38,7 +39,7 @@ BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
 
 ## END CONSTANTS ---------------------------------------------------------------
 
-def get_current_time(target, mode, port, debug_trigger):
+def get_current_time(target, mode, port, num_X, debug_trigger):
 
     if debug_trigger == 1:
         print("Attempting to connect to:", target)
@@ -88,7 +89,8 @@ def get_current_time(target, mode, port, debug_trigger):
             # Loop until SIGNINT
             while True:
                 try:
-                    tcp_client_time = int(time.time())
+                    #tcp_client_time = int(time.time())
+                    tcp_client_time = num_X
                     tcp_client_time += time_delta # we add the 70 year difference when sending
                     message = struct.pack("!I", tcp_client_time)
                     client_socket.send(message)#We send our time to the server we connected to.
@@ -104,7 +106,7 @@ def get_current_time(target, mode, port, debug_trigger):
             print("Error")
             exit(1)
 
-def time_recieve(client_socket, debug_trigger):
+def time_recieve(client_socket,debug_trigger):
     # Revieve the 4byte (32bit) current time data
     # In this case, we will receive the substraction of the server time with the client's time (no need for time.ctime())
     recv_data = client_socket.recv(BUFSIZE)
@@ -140,7 +142,7 @@ def time_recieve(client_socket, debug_trigger):
         client_socket.close()
 
 
-def time_server(listening_port, debug_trigger): # The server is concurrent
+def time_server(listening_port,debug_trigger): # The server is concurrent
 
     print("TIME server running on port", listening_port)
 
@@ -154,8 +156,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
         exit(1)
 
     tcp_server_socket.listen(BACKLOG)
-
-    while True:
+    times = 0
+    while times < 11:
         connection_socket, client_addr = tcp_server_socket.accept()
         try:
             if os.fork() == 0:
@@ -164,13 +166,16 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 while True:
                     try:
                         # grab the current system time
-                        server_rcv_data = connection_socket.recv(BUFSIZE)
-                        client_time = struct.unpack("!I", server_rcv_data)[0]
+                        if(times == 0):
+                            server_rcv_data = connection_socket.recv(BUFSIZE)# we receive num_X
+                            client_time = struct.unpack("!I", server_rcv_data)[0]
                         if debug_trigger == 1:
-                            print("Client time:", client_time)
+                            print("Client 32_bit_integer:", client_time)
+                        if(times > 0):
+                            sleep(1) # waits 1 sec except 1st time.
                         mytime = int(time.time())
                         client_time -= time_delta
-                        mytime -= client_time
+                        mytime += client_time
                     except struct.error:
                         print("Error receiving...")
                         connection_socket.close()
@@ -197,6 +202,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
             connection_socket.close()
             print("\nSIGINT received, closing server")
             break
+        times += 1
     tcp_server_socket.close()
 
 def main():
@@ -230,7 +236,7 @@ def main():
     if len(sys.argv) == 1: # no input args
         usage_info()
         exit(1)
-    if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
+    if len(sys.argv) >= 10: # we should have at most 9 args (0-8)
         usage_info()
         exit(1)
 
@@ -282,10 +288,20 @@ def main():
     except ValueError:
             port = DEFAULT_PORT # Default: Port 37
 
+    #New argument: "-x X".
+        # Port selection for server and default behaviour programmed
+    
+
+
     ## Program launch
     # Client
     if mode == UDP or mode == TCP:
-        get_current_time(target, mode, port, debug_trigger)
+        try:
+            if (sys.argv.index("-x")): # PORT means -p
+                num_X = abs(int(sys.argv[sys.argv.index("-x")+1])) #needs to be a 32-bit unsigned integer, for that the abs() function if the user is stupid. 
+        except ValueError:
+            num_X = 0 # Default: Port 37
+        get_current_time(target, mode, port, num_X, debug_trigger)
     # Server
     elif mode == TIME_SERVER:
         time_server(port, debug_trigger)
