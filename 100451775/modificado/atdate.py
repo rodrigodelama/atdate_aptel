@@ -85,7 +85,8 @@ def get_current_time(target, mode, port, debug_trigger, new_param_x):
             if debug_trigger == 1:
                 print("TCP handshake successful with TIME server!")
             packet_x = struct.pack("!i", new_param_x)
-            print(packet_x)
+            if debug_trigger == 1:
+                print("Packet x: "+packet_x)
             try:
                 client_socket.send(packet_x)
                 while True:
@@ -95,11 +96,13 @@ def get_current_time(target, mode, port, debug_trigger, new_param_x):
                         print("error in format recieved")
                     except OSError:
                         client_socket.close()
-                        print("Closing program")
+                        if debug_trigger == 1:
+                            print("Closing program")
                         exit(1)
             except OSError: # detecting the 0 byte time recieve
                 client_socket.close()
-                print("Closing program")
+                if debug_trigger == 1:
+                    print("Closing program")
                 exit(1)
         except gaierror:
             print("Error")
@@ -135,7 +138,8 @@ def time_recieve(client_socket, debug_trigger):
     except struct.error: 
         # detects when the struct is 0 bytes, which means server has ended the connection with our client
         # used for both cases of connection (UDP, TCP)
-        print("Server closed the connection, closing socket...")
+        if debug_trigger == 1:
+            print("Server closed the connection, closing socket...")
         client_socket.close()
 
 
@@ -292,12 +296,14 @@ def main():
             if debug_trigger == 1:
                 print("The number detected was:", new_param_x)
             new_param_x = int(new_param_x)
-            print(type(new_param_x))
+            if debug_trigger == 1:
+                print(type(new_param_x))
             if type(new_param_x) != int:
                 print("You must input -x X (number) for the process to register")
                 exit(1)
-            print("Success!")
-    except IndexError or ValueError:
+            if debug_trigger == 1:
+                print("Success! Parameter X registered")
+    except (IndexError, ValueError):
         print("Index or value error: did not input X")
 
     ## Program launch
@@ -323,7 +329,7 @@ def usage_info():
 # This is how we execute main
 # The code below means we want this script to be executed, signaling Python that it's NOT a library
 if __name__ == "__main__":
-    # while True:
+
     try:
         main()
     except KeyboardInterrupt:
