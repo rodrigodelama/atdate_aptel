@@ -159,8 +159,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     tcp_server_socket.listen(BACKLOG)
 
     while True:
-        connection_socket, client_addr = tcp_server_socket.accept()
         try:
+            connection_socket, client_addr = tcp_server_socket.accept()
             if os.fork() == 0:
                 # child process
                 tcp_server_socket.close()
