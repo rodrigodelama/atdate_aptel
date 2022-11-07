@@ -29,7 +29,7 @@ TIME_SERVER = "s"
 PORT = "-p"
 DEFAULT_PORT = 37
 DEBUG = "-d"
-
+NEW_INT = "-n"
 # Server constants (from: TCPServer_conc.py)
 SERV_BUFSIZE = 1024
 BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
@@ -38,7 +38,7 @@ BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
 
 ## END CONSTANTS ---------------------------------------------------------------
 
-def get_current_time(target, mode, port, debug_trigger):
+def get_current_time(target, mode, port, value_N ,debug_trigger):
 
     if debug_trigger == 1:
         print("Attempting to connect to:", target)
@@ -66,13 +66,13 @@ def get_current_time(target, mode, port, debug_trigger):
             print("Sent empty UDP message (0bytes)")
 
         # Time recieve definition called
-        time_recieve(client_socket, debug_trigger)
+        time_recieve(client_socket, mode ,debug_trigger)
         if debug_trigger == 1:
             print("Succesful retreival: Closing socket")
         client_socket.close()
         exit(0) # End program after succesful TIME request
 
-    elif (mode == TCP):
+    elif (mode == TCP):#Solo usamos valor N en este caso.
         try:
             if debug_trigger == 1:
                 print("Attempting to open TCP socket")
@@ -86,9 +86,19 @@ def get_current_time(target, mode, port, debug_trigger):
                 print("TCP handshake successful with TIME server!")
 
             # Loop until SIGNINT
+            n_val_rcvd = 0
             while True:
                 try:
-                    time_recieve(client_socket, debug_trigger)
+                    if n_val_rcvd == 0:
+                        #El cliente TCP, una vez establecida la conexión con el servidor TCP, 
+                        # envía el valor de N al servidor TCP.
+                        #montamos el paquete:
+                        my_N_val = struct.pack("!I", value_N)
+                        client_socket.send(my_N_val)
+                        time_recieve(client_socket, mode ,debug_trigger)
+                        n_val_rcvd = 1
+                    elif n_val_rcvd == 1:
+                        time_recieve(client_socket, mode ,debug_trigger)
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -97,7 +107,7 @@ def get_current_time(target, mode, port, debug_trigger):
             print("Error")
             exit(1)
 
-def time_recieve(client_socket, debug_trigger):
+def time_recieve(client_socket, mode ,debug_trigger):
     # Revieve the 4byte (32bit) current time data
     recv_data = client_socket.recv(BUFSIZE)
 
@@ -118,7 +128,7 @@ def time_recieve(client_socket, debug_trigger):
 
         # We subtract the 70year time delta when receiving (adjusting for UNIX)
         time_since_1970 -= time_delta
-
+        
         # Use time.ctime - Carlos' tip
         print(time.ctime(time_since_1970).replace(" 2022", " CET 2022")) # Find a way to automate the year
         
@@ -145,7 +155,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
         exit(1)
 
     tcp_server_socket.listen(BACKLOG)
-
+    first_connection = 1
+    value_N = 0
     while True:
         connection_socket, client_addr = tcp_server_socket.accept()
         try:
@@ -154,21 +165,31 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 tcp_server_socket.close()
 
                 while True:
+                    if first_connection == 1:
+                        value_N_rcv = connection_socket.recv(BUFSIZE)# 4 bytes, igual que el entero sin signo que tenemos que recibir en el server. 
+                        value_N = struct.unpack("!I", value_N_rcv)
+                        value_N_snd = struct.pack("!I", value_N)
+                        connection_socket.send(value_N_snd)
+                        first_connection = 0 # Para que luego no espere recivir nada,solo mandar la hora.
                     # grab the current system time
-                    mytime = int(time.time())
-                    if debug_trigger == 1:
-                        print("Local time:", mytime)
-                    mytime += time_delta # we add the 70 year difference when sending
-                    if debug_trigger == 1:
-                        print("Time plus time delta:", mytime)
+                    elif first_connection == 0:
+                        mytime = int(time.time())
+                        if debug_trigger == 1:
+                            print("Local time:", mytime)
+                        mytime += time_delta # we add the 70 year difference when sending
+                        if debug_trigger == 1:
+                            print("Time plus time delta:", mytime)
 
-                    message = struct.pack("!I", mytime)
-                    # Transformed to BE with ! to send over the network
-                    # The ! flips bytes to and from network order
+                        message = struct.pack("!I", mytime)
+                        # Transformed to BE with ! to send over the network
+                        # The ! flips bytes to and from network order
 
-                    print("Attending request...")
-                    connection_socket.send(message)
-                    sleep(1)
+                        print("Attending request...")
+                        connection_socket.send(message)
+                        
+                        sleep(value_N)
+                        #No volvemos a poner a 1 la variable aux de "first connection", cada child process nuevo 
+                        #empezara con el valor original.
             else:
                 # parent process
                 connection_socket.close()
@@ -263,8 +284,17 @@ def main():
 
     ## Program launch
     # Client
-    if mode == UDP or mode == TCP:
-        get_current_time(target, mode, port, debug_trigger)
+    Value_N = 0
+    if mode == UDP:
+        get_current_time(target, mode, port, value_N, debug_trigger)
+    elif mode == TCP:#Revisamos si esta bien metido el argumento.
+        try:
+            if (sys.argv.index(NEW_INT)): # PORT means -p
+                value_N = abs(int(sys.argv[sys.argv.index(NEW_INT)+1]))#Para que no tnga signo.
+            get_current_time(target, mode, port, value_N, debug_trigger)
+        except ValueError:
+            print("Not -n flag in argv")
+            exit(1)
     # Server
     elif mode == TIME_SERVER:
         time_server(port, debug_trigger)
