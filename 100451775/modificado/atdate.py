@@ -88,10 +88,15 @@ def get_current_time(target, mode, port, debug_trigger, new_param_x):
             print(packet_x)
             try:
                 client_socket.send(packet_x)
-                try:
-                    time_recieve(client_socket, debug_trigger)
-                except struct.error:
-                    print("error in format recieved")
+                while True:
+                    try:
+                        time_recieve(client_socket, debug_trigger)
+                    except struct.error:
+                        print("error in format recieved")
+                    except OSError:
+                        client_socket.close()
+                        print("Closing program")
+                        exit(1)
             except OSError: # detecting the 0 byte time recieve
                 client_socket.close()
                 print("Closing program")
@@ -318,10 +323,9 @@ def usage_info():
 # This is how we execute main
 # The code below means we want this script to be executed, signaling Python that it's NOT a library
 if __name__ == "__main__":
-    while True:
-        try:
-            main()
-        except KeyboardInterrupt:
-            print("\nSIGINT received, closing program")
-            exit(1)
-
+    # while True:
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nSIGINT received, closing program")
+        exit(1)
