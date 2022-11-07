@@ -95,7 +95,7 @@ def get_current_time(target, mode, port, debug_trigger, new_param_x):
                     except struct.error:
                         print("error in format recieved")
                     except OSError:
-                        # client_socket.close()
+                        client_socket.close()
                         if debug_trigger == 1:
                             print("Closing program")
                         exit(1)
@@ -189,7 +189,7 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                         sleep(1)
                         counter += 1
                         if counter == client_x_value:
-                            print("time sent: "+str(client_x_value)+"times")
+                            print("time sent:"+ str(client_x_value) +"times")
                             break
                 except struct.error:
                     print("client sent incorrect data")
