@@ -95,7 +95,7 @@ def get_current_time(target, mode, port, debug_trigger, new_param_x):
                     except struct.error:
                         print("error in format recieved")
                     except OSError:
-                        client_socket.close()
+                        # client_socket.close()
                         if debug_trigger == 1:
                             print("Closing program")
                         exit(1)
@@ -159,8 +159,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
     tcp_server_socket.listen(BACKLOG)
 
     while True:
+        connection_socket, client_addr = tcp_server_socket.accept()
         try:
-            connection_socket, client_addr = tcp_server_socket.accept()
             if os.fork() == 0:
                 # child process
                 tcp_server_socket.close()
