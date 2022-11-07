@@ -186,8 +186,10 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
 
                         print("Attending request...")
                         connection_socket.send(message)
-                        
-                        sleep(value_N)
+                        value_N_int = value_N[0]
+                        # print(type(value_N))
+                        # print(value_N_int)
+                        sleep(value_N_int)
                         #No volvemos a poner a 1 la variable aux de "first connection", cada child process nuevo 
                         #empezara con el valor original.
             else:
