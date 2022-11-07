@@ -168,8 +168,8 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                     if first_connection == 1:
                         value_N_rcv = connection_socket.recv(BUFSIZE)# 4 bytes, igual que el entero sin signo que tenemos que recibir en el server. 
                         value_N = struct.unpack("!I", value_N_rcv)
-                        value_N_snd = struct.pack("!I", value_N)
-                        connection_socket.send(value_N_snd)
+                        #value_N_snd = struct.pack("!I", value_N)
+                        #connection_socket.send(value_N_snd)
                         first_connection = 0 # Para que luego no espere recivir nada,solo mandar la hora.
                     # grab the current system time
                     elif first_connection == 0:
@@ -230,7 +230,7 @@ def main():
     if len(sys.argv) == 1: # no input args
         usage_info()
         exit(1)
-    if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
+    if len(sys.argv) >= 13: # we should have at most 9 args (0-8)
         usage_info()
         exit(1)
 
