@@ -171,7 +171,6 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                     client_n_value = struct.unpack("!i", client_packet)[0]
                     if debug_trigger == 1:
                         print ("value recieved form client:", int(client_n_value))
-                    counter = 0
                     while True:
                         # grab and send the current system time for how many times specified in -x
                         mytime = int(time.time())
@@ -231,11 +230,11 @@ def main():
     if len(sys.argv) == 1: # no input args
         usage_info()
         exit(1)
-    if len(sys.argv) >= 13: # we should have at most 9 args (0-8)
+    if len(sys.argv) >= 13:
         usage_info()
         exit(1)
 
-    ## Filtering flags -m -s -p and -d
+    ## Filtering flags -m -s -p and -d AND -n
     # Debugger Activation
     try:
         if (sys.argv.index(DEBUG)): # DEBUG means -d
@@ -287,21 +286,21 @@ def main():
     try:
         if mode == TIME_SERVER:
             if debug_trigger == 1:
-                print("No need for -x here :)")
-        elif (sys.argv.index("-n")):
+                print("No need for", NEW_PARAMETER, "here :)") # MAYBE
+        elif (sys.argv.index(NEW_PARAMETER)):
             new_param = sys.argv[sys.argv.index(NEW_PARAMETER)+1]
             if debug_trigger == 1:
-                print("The number detected was:", new_param)
+                print("The detected input was:", new_param)
             new_param = int(new_param)
             if debug_trigger == 1:
                 print(type(new_param))
             if type(new_param) != int:
-                print("You must input -n X (number) for the parameter to register")
+                print("You must input", NEW_PARAMETER, "X (number) for an input to register")
                 exit(1)
             if debug_trigger == 1:
-                print("Success! Parameter X registered")
+                print("Success!", NEW_PARAMETER, "input value registered as:", new_param)
     except (IndexError, ValueError):
-        print("Index or value error: did not input X")
+        print("Index or value error: did not input any", NEW_PARAMETER, "value")
 
     ## Program launch
     # Client
