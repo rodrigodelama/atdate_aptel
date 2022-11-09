@@ -29,7 +29,7 @@ TIME_SERVER = "s"
 PORT = "-p"
 DEFAULT_PORT = 37
 DEBUG = "-d"
-new_param = "-n"
+NEW_PARAMETER = "-r"
 
 # Server constants (from: TCPServer_conc.py)
 SERV_BUFSIZE = 1024
@@ -39,7 +39,7 @@ BACKLOG = 10    # KINDA WORKS AS RECEPTION WINDOW SIZE:
 
 ## END CONSTANTS ---------------------------------------------------------------
 
-def get_current_time(target, mode, port, debug_trigger):
+def get_current_time(target, mode, port, debug_trigger, new_param):
 
     if debug_trigger == 1:
         print("Attempting to connect to:", target)
@@ -85,15 +85,26 @@ def get_current_time(target, mode, port, debug_trigger):
 
             if debug_trigger == 1:
                 print("TCP handshake successful with TIME server!")
-
-            # Loop until SIGNINT
-            while True:
-                try:
-                    time_recieve(client_socket, debug_trigger)
-                except OSError: # detecting the 0 byte time recieve
-                    client_socket.close()
+            packet_r = struct.pack("!i", new_param)
+            if debug_trigger == 1:
+                print("Packet r: "+ str(packet_r))
+            try:
+                client_socket.send(packet_r)
+                while True:
+                    try:
+                        time_recieve(client_socket, debug_trigger)
+                    except struct.error:
+                        print("error in format recieved")
+                    except OSError:
+                        client_socket.close()
+                        if debug_trigger == 1:
+                            print("Closing program")
+                        exit(1)
+            except OSError: # detecting the 0 byte time recieve
+                client_socket.close()
+                if debug_trigger == 1:
                     print("Closing program")
-                    exit(1)
+                exit(1)
         except gaierror:
             print("Error")
             exit(1)
@@ -128,7 +139,8 @@ def time_recieve(client_socket, debug_trigger):
     except struct.error: 
         # detects when the struct is 0 bytes, which means server has ended the connection with our client
         # used for both cases of connection (UDP, TCP)
-        print("Server closed the connection, closing socket...")
+        if debug_trigger == 1:
+            print("Server closed the connection, closing socket...")
         client_socket.close()
 
 
@@ -154,22 +166,31 @@ def time_server(listening_port, debug_trigger): # The server is concurrent
                 # child process
                 tcp_server_socket.close()
 
-                while True:
-                    # grab the current system time
-                    mytime = int(time.time())
+                try:
+                    client_packet = connection_socket.recv(BUFSIZE)
+                    client_r_value = struct.unpack("!i", client_packet)[0]
                     if debug_trigger == 1:
-                        print("Local time:", mytime)
-                    mytime += time_delta # we add the 70 year difference when sending
-                    if debug_trigger == 1:
-                        print("Time plus time delta:", mytime)
+                        print ("value recieved form client:", int(client_r_value))
+                    while True:
+                        # grab and send the current system time for how many times specified in -x
+                        mytime = int(time.time())
+                        if debug_trigger == 1:
+                            print("Local time:", mytime)
+                        mytime += time_delta # we add the 70 year difference when sending
+                        mytime -= client_r_value
+                        if debug_trigger == 1:
+                            print("Time minus", NEW_PARAMETER, "delta:", mytime)
 
-                    message = struct.pack("!I", mytime)
-                    # Transformed to BE with ! to send over the network
-                    # The ! flips bytes to and from network order
+                        message = struct.pack("!I", mytime)
+                        # Transformed to BE with ! to send over the network
+                        # The ! flips bytes to and from network order
 
-                    print("Attending request...")
-                    connection_socket.send(message)
-                    sleep(1)
+                        print("Attending request with time delayed", str(client_r_value), "seconds")
+                        connection_socket.send(message)
+                        sleep(1)
+                except struct.error:
+                    print("client sent incorrect data")
+                    exit(1)
             else:
                 # parent process
                 connection_socket.close()
@@ -210,11 +231,11 @@ def main():
     if len(sys.argv) == 1: # no input args
         usage_info()
         exit(1)
-    if len(sys.argv) >= 9: # we should have at most 9 args (0-8)
+    if len(sys.argv) >= 13:
         usage_info()
         exit(1)
 
-    ## Filtering flags -m -s -p and -d
+    ## Filtering flags -m -s -p and -d AND -r
     # Debugger Activation
     try:
         if (sys.argv.index(DEBUG)): # DEBUG means -d
@@ -262,10 +283,30 @@ def main():
     except ValueError:
             port = DEFAULT_PORT # Default: Port 37
 
+    # NEW EXAM PARAMETER
+    try:
+        if mode == TIME_SERVER:
+            if debug_trigger == 1:
+                print("No need for", NEW_PARAMETER, "here :)") # MAYBE
+        elif (sys.argv.index(NEW_PARAMETER)):
+            new_param = sys.argv[sys.argv.index(NEW_PARAMETER)+1]
+            if debug_trigger == 1:
+                print("The detected input was:", new_param)
+            new_param = int(new_param)
+            if debug_trigger == 1:
+                print(type(new_param))
+            if type(new_param) != int:
+                print("You must input", NEW_PARAMETER, "R (number) for an input to register")
+                exit(1)
+            if debug_trigger == 1:
+                print("Success!", NEW_PARAMETER, "input value registered as:", new_param)
+    except (IndexError, ValueError):
+        print("Index or value error: did not input any", NEW_PARAMETER, "value")
+
     ## Program launch
     # Client
     if mode == UDP or mode == TCP:
-        get_current_time(target, mode, port, debug_trigger)
+        get_current_time(target, mode, port, debug_trigger, new_param)
     # Server
     elif mode == TIME_SERVER:
         time_server(port, debug_trigger)

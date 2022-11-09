@@ -89,6 +89,8 @@ def get_current_time(target, mode, port, debug_trigger):
             while True:
                 try:
                     time_recieve(client_socket, debug_trigger)
+                except struct.error:
+                        print("error in format recieved")
                 except OSError: # detecting the 0 byte time recieve
                     client_socket.close()
                     print("Closing program")
@@ -284,21 +286,9 @@ def usage_info():
 # This is how we execute main
 # The code below means we want this script to be executed, signaling Python that it's NOT a library
 if __name__ == "__main__":
-    while True:
-        try:
-            main()
-        except KeyboardInterrupt:
-            print("\nSIGINT received, closing program")
-            exit(1)
-
-    '''
-    # NEW PARAMETER EXAMPLE
-    new_param_x = ""
+    
     try:
-        if (sys.argv.index("-x")):
-            mode = sys.argv[sys.argv.index(MODE)+1]
-            if debug_trigger == 1:
-                print("The new parameter is:", new_param_x)
-    except ValueError:
-        mode = UDP # Default: UDP client
-    '''
+        main()
+    except KeyboardInterrupt:
+        print("\nSIGINT received, closing program")
+        exit(1)
